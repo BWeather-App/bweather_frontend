@@ -1,16 +1,48 @@
-# bweather_frontend
+# Weather App (Search Feature Only)
 
-A new Flutter project.
+This Flutter project implements the **search functionality** of a weather app using custom API integration.
 
-## Getting Started
+## 🌤️ Features Implemented
+- Search for cities and fetch weather data using custom API
+- Display city name, temperature (in Celsius), and weather description
+- Use of `Provider` for state management
+- HTTP integration using `http` package
 
-This project is a starting point for a Flutter application.
+## 📦 Folder Structure (Only Relevant to Search)
+```
+lib/
+├── models/
+│   ├── city.dart
+│   └── weather_info.dart
+├── providers/
+│   └── city_provider.dart
+├── services/
+│   └── weather_service.dart
+├── views/
+│   ├── screens/
+│   │   ├── manage_city_screen.dart
+│   │   └── search_city_screen.dart
+│   └── widgets/
+│       ├── search_field.dart
+│       └── city_tile.dart
+└── main.dart
+```
 
-A few resources to get you started if this is your first Flutter project:
+## 🛠️ API Used
+```
+Base URL: https://myporto.site/bweather-backend/public/index.php
+Search Endpoint: ?endpoint=search&query={city}
+Weather Endpoint: ?endpoint=weather&latitude={lat}&longitude={lon}
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🚀 Run Project
+```bash
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+⚠️ If you're running on Flutter Web, be aware of potential **CORS issues** when accessing the API.
+
+---
+
+© 2025 Weather App - Search Team
