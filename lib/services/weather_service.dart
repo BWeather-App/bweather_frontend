@@ -2,12 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WeatherService {
-  final String _baseUrl =
-      'https://myporto.site/bweather-backend/public/index.php';
+  final String _baseUrl = 'http://192.168.5.4:8000';
 
-  // 🔍 Ambil data cuaca berdasarkan kota
   Future<Map<String, dynamic>> getWeatherByCity(String city) async {
-    final url = Uri.parse('$_baseUrl?endpoint=search&query=$city');
+    final url = Uri.parse('$_baseUrl/search?query=$city');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -16,21 +14,18 @@ class WeatherService {
 
     final data = json.decode(response.body);
 
-    if (data['weather'] == null || data['location'] == null) {
+    if (data['forecast'] == null || data['location'] == null) {
       throw Exception('Data cuaca tidak lengkap');
     }
 
-    return data; // Sudah terstruktur: { location: ..., weather: { ... } }
+    return data;
   }
 
-  // 📍 Ambil data cuaca berdasarkan lokasi
   Future<Map<String, dynamic>> getWeatherByLocation(
     double lat,
     double lon,
   ) async {
-    final url = Uri.parse(
-      '$_baseUrl?endpoint=weather&latitude=$lat&longitude=$lon',
-    );
+    final url = Uri.parse('$_baseUrl/weather?lat=$lat&lon=$lon');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -39,10 +34,32 @@ class WeatherService {
 
     final data = json.decode(response.body);
 
+    // Penyesuaian sesuai response dari backend
     if (data['weather'] == null || data['location'] == null) {
       throw Exception('Data cuaca tidak lengkap');
     }
 
     return data;
+  }
+
+  Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
+    final url = Uri.parse('$_baseUrl/suggestions?query=$query');
+    final response = await http.get(url);
+
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengambil saran lokasi');
+    }
+
+    final List<dynamic> data = json.decode(response.body);
+    return data
+        .map(
+          (item) => {
+            'name': item['name'],
+            'full': item['full'],
+            'lat': item['lat'].toString(),
+            'lon': item['lon'].toString(),
+          },
+        )
+        .toList();
   }
 }
