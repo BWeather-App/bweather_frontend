@@ -149,15 +149,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
             ),
             onPressed: widget.onToggleTheme,
           ),
-          IconButton(
-            icon: Icon(Icons.settings, color: iconColor),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ManageCityPage()),
-              );
-            },
-          ),
         ],
         centerTitle: true,
         title: Column(
