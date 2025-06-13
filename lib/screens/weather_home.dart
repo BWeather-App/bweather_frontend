@@ -5,7 +5,6 @@ import '../services/permission_service.dart';
 import '../services/location_service.dart';
 import 'search_city_page.dart';
 import 'manage_city_page.dart';
-import 'weather_detail_page.dart';
 
 class WeatherHomePage extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -24,6 +23,7 @@ class WeatherHomePage extends StatefulWidget {
 class _WeatherHomePageState extends State<WeatherHomePage> {
   Map<String, dynamic>? weatherData;
   bool isLoading = true;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -40,12 +40,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
     try {
       final position = await LocationService().getCurrentLocation();
-      final data = await WeatherService().fetchWeather(
-        lat: position.latitude,
-        lon: position.longitude,
+      final result = await WeatherService().getWeatherByLocation(
+        position.latitude,
+        position.longitude,
       );
+
       setState(() {
-        weatherData = data;
+        weatherData = result;
         isLoading = false;
       });
     } catch (e) {
@@ -54,21 +55,42 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     }
   }
 
-  String _getIconAsset(String condition, bool isDark) {
+  String _getWeatherDescription(Map<String, dynamic> weather) {
+    final temp = weather['suhu'] ?? 0;
+    final humidity = weather['kelembapan'] ?? 0;
+    final rainChance = weather['peluang_hujan'] ?? 0;
+
+    if (rainChance > 80) return "Hujan Lebat";
+    if (rainChance > 50) return "Hujan Ringan";
+    if (humidity > 80 && temp < 26) return "Berawan dan Lembab";
+    if (temp >= 30 && rainChance < 20) return "Panas Terik";
+    if (temp <= 25 && rainChance < 10) return "Cerah";
+    return "Berawan";
+  }
+
+  String _getIconAsset(dynamic condition, bool isDark) {
     final base = "assets/icons/";
     final map = {
       "clear": "clear",
       "cerah": "clear",
       "clouds": "cloudy",
+      "berawan": "cloudy",
+      "berawan dan lembab": "cloudy",
       "rain": "rain",
+      "hujan ringan": "rain",
+      "hujan lebat": "storm",
       "drizzle": "drizzle",
       "thunderstorm": "storm",
+      "storm": "storm",
       "snow": "snow",
       "mist": "mist",
       "fog": "fog",
       "haze": "haze",
+      "panas terik": "clear",
     };
-    final icon = map[condition.toLowerCase()] ?? "cloudy";
+
+    final key = (condition is String) ? condition.toLowerCase() : "clear";
+    final icon = map[key] ?? "cloudy";
     return "$base${isDark ? 'dark' : 'light'}/$icon.png";
   }
 
@@ -80,13 +102,30 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     final iconColor = isLight ? const Color(0xFF232B3E) : Colors.white;
     final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
 
-    final weather = weatherData?['current'];
+    final weather = weatherData?['weather']?['cuaca_saat_ini'];
     final location = weatherData?['location'];
+    final mainCondition =
+        weather?['main'] ?? _getWeatherDescription(weather ?? {});
     final forecastList = [
-      if (weatherData?['yesterday'] != null) weatherData!['yesterday'],
-      if (weatherData?['current'] != null) weatherData!['current'],
-      ...?weatherData?['forecast'],
+      if ((weatherData?['weather']?['kemarin'] ?? []).isNotEmpty)
+        weatherData!['weather']['kemarin'][0],
+      if ((weatherData?['weather']?['hari_ini'] ?? []).isNotEmpty)
+        weatherData!['weather']['hari_ini'][0],
+      if ((weatherData?['weather']?['besok'] ?? []).isNotEmpty)
+        weatherData!['weather']['besok'][0],
+      if ((weatherData?['weather']?['lusa'] ?? []).isNotEmpty)
+        weatherData!['weather']['lusa'][0],
+      if ((weatherData?['weather']?['hari_ke_3'] ?? []).isNotEmpty)
+        weatherData!['weather']['hari_ke_3'][0],
     ];
+
+    final current = weatherData?['weather']?['cuaca_saat_ini'] ?? {};
+
+    String formatTime(String? t) {
+      if (t == null) return '-';
+      final dt = DateTime.tryParse(t);
+      return dt != null ? DateFormat.Hm().format(dt) : '-';
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -109,15 +148,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
               color: iconColor,
             ),
             onPressed: widget.onToggleTheme,
-          ),
-          IconButton(
-            icon: Icon(Icons.settings, color: iconColor),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ManageCityPage()),
-              );
-            },
           ),
         ],
         centerTitle: true,
@@ -153,11 +183,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   style: TextStyle(color: textColor),
                 ),
               )
-              : Column(
+              : ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.all(16),
                 children: [
                   const SizedBox(height: 30),
+
                   Image.asset(
-                    _getIconAsset(weather?['main'] ?? 'clear', !isLight),
+                    _getIconAsset(mainCondition, !isLight),
                     width: 120,
                     height: 120,
                   ),
@@ -167,7 +200,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "${(weather?['temp'] ?? 0).round()}",
+                        "${(weather?['suhu'] ?? 0).round()}",
                         style: TextStyle(
                           color: textColor,
                           fontSize: 80,
@@ -185,8 +218,9 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    weather?['description'] ?? "",
+                    _getWeatherDescription(weather ?? {}),
                     style: TextStyle(color: textColor, fontSize: 18),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 20),
                   Row(
@@ -197,19 +231,20 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       Text("Angin", style: TextStyle(color: subTextColor)),
                       const SizedBox(width: 8),
                       Text(
-                        "${weather?['wind_speed'] ?? '-'} m/s",
+                        "${weather?['kecepatan_angin'] ?? '-'} m/s",
                         style: TextStyle(color: textColor),
                       ),
                     ],
                   ),
-                  const Spacer(),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.20),
+                  // Tambahkan ini tepat di bawah Container forecast
+                  const SizedBox(height: 24),
                   GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const WeatherDetailPage(),
-                        ),
+                      _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: Duration(milliseconds: 500),
+                        curve: Curves.easeOut,
                       );
                     },
                     child: Icon(
@@ -218,6 +253,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       size: 32,
                     ),
                   ),
+                  const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       vertical: 18,
@@ -232,7 +268,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                 BoxShadow(
                                   color: Colors.black.withOpacity(0.04),
                                   blurRadius: 16,
-                                  offset: const Offset(0, 4),
+                                  offset: Offset(0, 4),
                                 ),
                               ]
                               : [],
@@ -242,17 +278,17 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       children:
                           forecastList.map<Widget>((day) {
                             final time =
-                                DateTime.tryParse(day['time']) ??
+                                DateTime.tryParse(day['waktu'] ?? '') ??
                                 DateTime.now();
                             final weekday =
                                 DateFormat.E(
                                   'id_ID',
                                 ).format(time).toUpperCase();
-                            final temp = "${(day['temp'] ?? 0).round()}°";
-                            final icon = _getIconAsset(
-                              day['main'] ?? 'clear',
-                              !isLight,
-                            );
+                            final temp = "${(day['suhu'] ?? 0).round()}°";
+                            final condition =
+                                day['main'] ?? _getWeatherDescription(day);
+                            final icon = _getIconAsset(condition, !isLight);
+
                             final isToday = DateTime.now().day == time.day;
 
                             return _WeatherDay(
@@ -268,6 +304,67 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             );
                           }).toList(),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _InfoCard(
+                        title: "UV Index",
+                        value: "${current['indeks_uv'] ?? '-'}",
+                        subtitle: "",
+                        color: Colors.green,
+                        isLight: isLight,
+                      ),
+                      const SizedBox(width: 12),
+                      _InfoCard(
+                        title: "Terasa Seperti",
+                        value: "${(current['terasa_seperti'] ?? 0).round()}°C",
+                        subtitle: "",
+                        color: Colors.blue,
+                        isLight: isLight,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _InfoCard(
+                        title: "Matahari",
+                        value:
+                            "${formatTime(current['matahari_terbit'])} - ${formatTime(current['matahari_terbenam'])}",
+                        subtitle: "Terbit - Terbenam",
+                        color: Colors.amber,
+                        isLight: isLight,
+                      ),
+                      const SizedBox(width: 12),
+                      _InfoCard(
+                        title: "Kelembaban",
+                        value: "${(current['kelembapan'] ?? 0).round()}%",
+                        subtitle: "",
+                        color: Colors.cyan,
+                        isLight: isLight,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _InfoCard(
+                        title: "Arah Angin",
+                        value: "${current['arah_angin'] ?? '-'}°",
+                        subtitle: "",
+                        color: Colors.orange,
+                        isLight: isLight,
+                      ),
+                      const SizedBox(width: 12),
+                      _InfoCard(
+                        title: "Peluang Hujan",
+                        value: "${(current['peluang_hujan'] ?? 0).round()}%",
+                        subtitle: "",
+                        color: Colors.indigo,
+                        isLight: isLight,
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -317,6 +414,70 @@ class _WeatherDay extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _InfoCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String subtitle;
+  final Color color;
+  final bool isLight;
+
+  const _InfoCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.color,
+    required this.isLight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subTextColor = isLight ? Colors.black54 : Colors.white54;
+    final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
+    final List<BoxShadow> cardShadow =
+        isLight
+            ? [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.04),
+                blurRadius: 16,
+                offset: Offset(0, 4),
+              ),
+            ]
+            : const [];
+
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: cardShadow,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: TextStyle(color: subTextColor, fontSize: 12)),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (subtitle.isNotEmpty)
+              Text(
+                subtitle,
+                style: TextStyle(color: subTextColor, fontSize: 12),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
