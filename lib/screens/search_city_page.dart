@@ -99,24 +99,35 @@ class _SearchCityPageState extends State<SearchCityPage> {
             _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : Expanded(
-                  child: ListView.builder(
-                    itemCount: _suggestions.length,
-                    itemBuilder: (context, index) {
-                      final item = _suggestions[index];
-                      return ListTile(
-                        title: Text(
-                          item['name'] ?? '',
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        subtitle: Text(
-                          item['region'] ?? '',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                        trailing: const Icon(Icons.add, color: Colors.white),
-                        onTap: () => onCitySelected(item['name'] ?? ''),
-                      );
-                    },
-                  ),
+                  child:
+                      _suggestions.isEmpty && _controller.text.length >= 3
+                          ? const Center(
+                            child: Text(
+                              "Tidak ada hasil ditemukan.",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                          : ListView.builder(
+                            itemCount: _suggestions.length,
+                            itemBuilder: (context, index) {
+                              final item = _suggestions[index];
+                              return ListTile(
+                                title: Text(
+                                  item['name'] ?? '',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                                subtitle: Text(
+                                  item['region'] ?? '',
+                                  style: const TextStyle(color: Colors.grey),
+                                ),
+                                trailing: const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                ),
+                                onTap: () => onCitySelected(item['name'] ?? ''),
+                              );
+                            },
+                          ),
                 ),
           ],
         ),
