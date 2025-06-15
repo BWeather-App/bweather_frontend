@@ -3,11 +3,15 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/permission_service.dart';
 import 'screens/weather_home.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
   Intl.defaultLocale = 'id_ID';
+  await Hive.initFlutter();
+  await Hive.openBox('weatherBox');
   runApp(const MyApp());
 }
 
