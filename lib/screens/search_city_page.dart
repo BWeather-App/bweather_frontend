@@ -1,3 +1,4 @@
+import 'dart:async'; // ← Tambahkan ini
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -14,12 +15,14 @@ class _SearchCityPageState extends State<SearchCityPage> {
   List<Map<String, String>> _suggestions = [];
   bool _isLoading = false;
 
+  Timer? _debounce; // ← Tambahkan ini
+
   Future<void> fetchSuggestions(String query) async {
     setState(() => _isLoading = true);
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.5.4:8000/suggestions?query=$query'),
+        Uri.parse('https://myporto.site/api/suggestions?query=$query'),
       );
       print('Status Code: ${response.statusCode}');
       print('Body: ${response.body}');
@@ -55,6 +58,13 @@ class _SearchCityPageState extends State<SearchCityPage> {
   }
 
   @override
+  void dispose() {
+    _debounce?.cancel(); // ← Bersihkan saat dispose
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1B1B2F),
@@ -71,8 +81,13 @@ class _SearchCityPageState extends State<SearchCityPage> {
             TextField(
               controller: _controller,
               onChanged: (value) {
+                if (_debounce?.isActive ?? false) _debounce?.cancel();
                 if (value.length >= 3) {
-                  fetchSuggestions(value);
+                  _debounce = Timer(const Duration(milliseconds: 500), () {
+                    fetchSuggestions(value);
+                  });
+                } else {
+                  setState(() => _suggestions.clear());
                 }
               },
               style: const TextStyle(color: Colors.white),
