@@ -1,0 +1,29 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        // Firebase services
+        classpath 'com.google.gms:google-services:4.3.15'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.10'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Opsional, jika tidak mau output build bercampur
+subprojects {
+    project.evaluationDependsOn(':app')
+}
+
+// Task untuk membersihkan hasil build
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

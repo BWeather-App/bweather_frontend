@@ -4,9 +4,12 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'services/permission_service.dart';
 import 'screens/weather_home.dart';
 import 'screens/city_weather_page.dart'; // sesuaikan path kalau berbeda
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await initializeDateFormatting('id_ID', null);
   Intl.defaultLocale = 'id_ID';
   runApp(const MyApp());
@@ -33,11 +36,24 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermission();
+      _initFCM(); // ← Tambahkan ini di sini
     });
   }
 
   void _checkPermission() async {
     await PermissionService.requestLocationPermission(context);
+  }
+
+  void _initFCM() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.requestPermission();
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      String? token = await messaging.getToken();
+      print('FCM Token: $token');
+    } else {
+      print('FCM permission declined');
+    }
   }
 
   @override

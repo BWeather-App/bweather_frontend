@@ -17,7 +17,7 @@ class _CityWeatherPageState extends State<CityWeatherPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.5.4:8000/search?query=$cityName'),
+        Uri.parse('http://192.168.5.6:8000/api/search?query=$cityName'),
       );
 
       if (response.statusCode == 200) {

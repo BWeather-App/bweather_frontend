@@ -19,7 +19,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
 
     try {
       final response = await http.get(
-        Uri.parse('http://192.168.5.4:8000/suggestions?query=$query'),
+        Uri.parse('http://192.168.5.6:8000/api/suggestions?query=$query'),
       );
       print('Status Code: ${response.statusCode}');
       print('Body: ${response.body}');
