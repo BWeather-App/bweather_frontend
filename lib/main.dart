@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/permission_service.dart';
-import 'screens/weather_home.dart';
-import 'screens/city_weather_page.dart'; // sesuaikan path kalau berbeda
+import 'screens/home/weather_home.dart';
+import 'screens/search/search_city_preview.dart'; // sesuaikan path kalau berbeda
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,8 +74,10 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {'/city-weather': (context) => const CityWeatherPage()},
+      routes: {'/city-weather': (context) => const CityWeatherPreviewPage()},
       home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }
 }
+
+// onToggleTheme: toggleTheme, isDarkMode: isDarkMode
