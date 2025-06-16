@@ -76,13 +76,13 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       "clouds": "cloudy",
       "berawan": "cloudy",
       "berawan dan lembab": "cloudy",
-      "rain": "rain",
-      "hujan ringan": "rain",
+      "rain": "rainy",
+      "hujan ringan": "rainy",
       "hujan lebat": "storm",
       "drizzle": "drizzle",
       "thunderstorm": "storm",
       "storm": "storm",
-      "snow": "snow",
+      "snow": "snowy",
       "mist": "mist",
       "fog": "fog",
       "haze": "haze",
@@ -285,9 +285,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                   'id_ID',
                                 ).format(time).toUpperCase();
                             final temp = "${(day['suhu'] ?? 0).round()}°";
-                            final condition =
-                                day['main'] ?? _getWeatherDescription(day);
-                            final icon = _getIconAsset(condition, !isLight);
+                            final icon = _getIconAsset(
+                              day['ikon'] ?? _getWeatherDescription(day),
+                              !isLight,
+                            );
 
                             final isToday = DateTime.now().day == time.day;
 
