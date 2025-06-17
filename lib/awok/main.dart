@@ -1,138 +1,139 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'home_top_widget.dart';
-import 'weather_detail_sheet.dart';
-// import 'city_weather_preview_page.dart'; // jika sudah ada
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id_ID', null);
-  Intl.defaultLocale = 'id_ID';
+void main() {
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
-  State<MyApp> createState() => _MyAppState();
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Backdrop Fullscreen Blur',
+      theme: ThemeData.dark(),
+      debugShowCheckedModeBanner: false,
+      home: const HomePage(),
+    );
+  }
 }
 
-class _MyAppState extends State<MyApp> {
-  bool isDarkMode = true;
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
 
-  void toggleTheme() {
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isSearchOpen = false;
+
+  void _toggleSearch() {
     setState(() {
-      isDarkMode = !isDarkMode;
+      _isSearchOpen = !_isSearchOpen;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Cuaca',
-      theme: ThemeData(
-        brightness: Brightness.light,
-        fontFamily: 'Montserrat',
-        scaffoldBackgroundColor: const Color(0xFFFCFAF6),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.light,
-          background: const Color(0xFFFCFAF6),
-          onBackground: const Color(0xFF232B3E),
-          primary: const Color(0xFF232B3E),
-          onPrimary: const Color(0xFF232B3E),
-        ),
-        iconTheme: const IconThemeData(color: Color(0xFF232B3E)),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Color(0xFF232B3E)),
-          bodyLarge: TextStyle(color: Color(0xFF232B3E)),
-          bodySmall: TextStyle(color: Color(0xFF232B3E)),
-        ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: 'Montserrat',
-        scaffoldBackgroundColor: const Color(0xFF232B3E),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          brightness: Brightness.dark,
-        ),
-      ),
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {
-        '/city-weather': (context) =>
-            const Placeholder(), // Ganti dengan CityWeatherPreviewPage jika ada
-      },
-      home: WeatherHomePage(
-        onToggleTheme: toggleTheme,
-        isDarkMode: isDarkMode,
-      ),
-    );
-  }
-}
-
-/// Tambahan widget pembungkus `WeatherHome`
-class WeatherHomePage extends StatelessWidget {
-  final VoidCallback onToggleTheme;
-  final bool isDarkMode;
-
-  const WeatherHomePage({
-    super.key,
-    required this.onToggleTheme,
-    required this.isDarkMode,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      body: WeatherHome(), // dari file awalmu
-      // floatingActionButton: FloatingActionButton(
-      //   onPressed: onToggleTheme,
-      //   child: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode),
-      // ),
-    );
-  }
-}
-
-/// Widget utama (dari file pertama)
-class WeatherHome extends StatelessWidget {
-  const WeatherHome({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.blue[100],
+      appBar: AppBar(
+        title: const Text('Home Cuaca'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _toggleSearch,
+          ),
+        ],
+      ),
       body: Stack(
         children: [
-          // Background gradient
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF0D1B2A),
-                  Color(0xFF1B263B),
+          // Tampilan utama
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Text("🌤️", style: TextStyle(fontSize: 80)),
+                SizedBox(height: 10),
+                Text("Cuaca Hari Ini", style: TextStyle(fontSize: 24)),
+              ],
+            ),
+          ),
+
+          // Layer Blur dan Search Page Fullscreen
+          if (_isSearchOpen)
+            Positioned.fill(
+              child: Stack(
+                children: [
+                  // Efek blur background
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.5),
+                    ),
+                  ),
+
+                  // Fullscreen SearchPage
+                  SearchPage(onClose: _toggleSearch),
                 ],
               ),
             ),
-          ),
-          // Cuaca sekarang
-          const HomeTopWidget(),
-
-          // Bottom Sheet cuaca detail
-          DraggableScrollableSheet(
-            initialChildSize: 0.25,
-            minChildSize: 0.25,
-            maxChildSize: 1,
-            builder: (context, scrollController) {
-              return WeatherDetailSheet(scrollController: scrollController);
-            },
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class SearchPage extends StatelessWidget {
+  final VoidCallback onClose;
+
+  const SearchPage({super.key, required this.onClose});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.transparent, // Supaya blur kelihatan
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header bar
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Cari kota...',
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.9),
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: onClose,
+                  ),
+                ],
+              ),
+            ),
+
+            // Konten Pencarian (Contoh)
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Hasil Pencarian Akan Ditampilkan Di Sini',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 // weather_detail_sheet.dart
 import 'package:flutter/material.dart';
 // import 'package:intl/intl.dart';
-// import 'package:flutter_cuaca/route.dart';
+import 'package:flutter_cuaca/route.dart';
 import 'dart:ui';
 
 class WeatherDetailSheet extends StatelessWidget {
@@ -35,14 +35,19 @@ class WeatherDetailSheet extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: ListView(
             controller: scrollController,
-            children: const [
-              Center(
+            children: [
+              const Center(
                 child: Icon(Icons.keyboard_arrow_up, color: Colors.white70),
               ),
-              SizedBox(height: 16),
-              // WeeklyForecast(),
-              
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
+              WeeklyForecast(
+                forecastList: forecastList,
+                isLight: isLight,
+                getWeatherDescription: getWeatherDescription,
+                getIconAsset: getIconAsset,
+              ),
+
+              const SizedBox(height: 16),
             ],
           ),
         ),

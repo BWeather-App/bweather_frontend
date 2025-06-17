@@ -4,7 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:hive/hive.dart';
 import '../../services/search_history_helper.dart';
 
 class SearchCityPage extends StatefulWidget {
@@ -22,10 +22,34 @@ class _SearchCityPageState extends State<SearchCityPage> {
   bool _selectMode = false;
   Set<String> _selectedHistory = {};
 
+  late Box _weatherBox;
+  List<Map<String, String>> _favoriteCities = [];
+
   @override
   void initState() {
     super.initState();
     _loadSearchHistory();
+    _initHive();
+  }
+
+  Future<void> _initHive() async {
+    _weatherBox = Hive.box('weatherBox');
+    final saved = _weatherBox.get('favorites', defaultValue: []);
+    setState(() {
+      _favoriteCities = List<Map<String, String>>.from(
+        (saved as List).map((e) => Map<String, String>.from(e)),
+      );
+    });
+  }
+
+  void _addToFavorites(String city, String region) {
+    final exists = _favoriteCities.any((item) => item['full'] == region);
+    if (!exists) {
+      setState(() {
+        _favoriteCities.add({'name': city, 'full': region});
+        _weatherBox.put('favorites', _favoriteCities);
+      });
+    }
   }
 
   Future<void> _loadSearchHistory() async {
@@ -90,6 +114,8 @@ class _SearchCityPageState extends State<SearchCityPage> {
     Color cardColor,
     Color iconColor,
   ) {
+    final alreadyFavorite = _favoriteCities.any((c) => c['full'] == region);
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
@@ -112,10 +138,16 @@ class _SearchCityPageState extends State<SearchCityPage> {
             fontSize: 12,
           ),
         ),
-        trailing: Icon(Icons.add, color: iconColor),
+        trailing: IconButton(
+          icon: Icon(
+            alreadyFavorite ? Icons.check : Icons.add,
+            color: alreadyFavorite ? Colors.greenAccent : iconColor,
+          ),
+          onPressed: () => _addToFavorites(city, region), // ✅ penting!
+        ),
         onTap: () async {
-          await saveSearchHistory(city);
-          Navigator.pushNamed(context, '/city-weather', arguments: city);
+          await saveSearchHistory(region);
+          Navigator.pushNamed(context, '/city-weather', arguments: region);
         },
       ),
     );
@@ -229,6 +261,67 @@ class _SearchCityPageState extends State<SearchCityPage> {
                         },
                       ),
                     ),
+                  if (!isKeyboardVisible &&
+                      !_isLoading &&
+                      _favoriteCities.isNotEmpty)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Lokasi Favorit",
+                            style: GoogleFonts.poppins(
+                              color: subtitleColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _favoriteCities.length,
+                              itemBuilder: (context, index) {
+                                final city = _favoriteCities[index];
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: ListTile(
+                                    leading: const Icon(Icons.star),
+                                    title: Text(
+                                      city['name'] ?? '',
+                                      style: GoogleFonts.poppins(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      city['full'] ?? '',
+                                      style: GoogleFonts.poppins(
+                                        color: subtitleColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/city-weather',
+                                        arguments: city['full'],
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   if (isKeyboardVisible &&
                       !_isLoading &&
                       _suggestions.isEmpty &&

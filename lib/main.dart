@@ -1,14 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'services/permission_service.dart';
-import 'screens/home/weather_home.dart';
-import 'screens/search/search_city_preview.dart'; // sesuaikan path kalau berbeda
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_cuaca/route.dart';
+
+Future<void> mintaIzinNotifikasi() async {
+  if (await Permission.notification.isDenied) {
+    await Permission.notification.request();
+  }
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
   Intl.defaultLocale = 'id_ID';
+  await Hive.initFlutter();
+  await Hive.openBox('weatherBox');
+  await NotificationService.init();
+  await mintaIzinNotifikasi();
   runApp(const MyApp());
 }
 
@@ -74,10 +85,9 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {'/city-weather': (context) => const CityWeatherPreviewPage()},
+      routes: {'/city-weather': (context) => CityWeatherPreviewPage()},
+
       home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }
 }
-
-// onToggleTheme: toggleTheme, isDarkMode: isDarkMode

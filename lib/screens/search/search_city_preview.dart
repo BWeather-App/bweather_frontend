@@ -3,7 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fl_chart/fl_chart.dart';
-
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive/hive.dart';
 import './widgets/weather_action_button.dart';
 
 class CityWeatherPreviewPage extends StatefulWidget {
@@ -16,6 +17,7 @@ class CityWeatherPreviewPage extends StatefulWidget {
 class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
   Map<String, dynamic>? weatherData;
   bool _isLoading = false;
+  bool isFavorite = false;
 
   Future<void> fetchWeather(String cityName) async {
     setState(() => _isLoading = true);
@@ -42,11 +44,34 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
     }
   }
 
+  Future<void> toggleFavorite(String cityName) async {
+    final box = Hive.box('weatherBox');
+    List<String> favorites =
+        box.get('favoriteCities', defaultValue: []).cast<String>();
+
+    if (favorites.contains(cityName)) {
+      favorites.remove(cityName);
+      isFavorite = false;
+    } else {
+      favorites.add(cityName);
+      isFavorite = true;
+    }
+
+    await box.put('favoriteCities', favorites);
+    setState(() {});
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final city = ModalRoute.of(context)?.settings.arguments as String?;
-    if (city != null) fetchWeather(city);
+    if (city != null) {
+      fetchWeather(city);
+      final box = Hive.box('weatherBox');
+      final favorites =
+          box.get('favoriteCities', defaultValue: []).cast<String>();
+      isFavorite = favorites.contains(city);
+    }
   }
 
   @override
@@ -65,7 +90,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
         backgroundColor: Colors.transparent,
         title: Text(
           city ?? "",
-          style: const TextStyle(color: Colors.white, fontFamily: 'Montserrat'),
+          style: GoogleFonts.poppins(color: Colors.white, fontSize: 20),
         ),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -116,10 +141,17 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                       return Column(
                                         children: [
                                           Text(
-                                            weather['label'],
-                                            style: const TextStyle(
-                                              color: Colors.white,
+                                            weather['label']
+                                                .toString()
+                                                .toUpperCase(),
+                                            style: TextStyle(
                                               fontFamily: 'Montserrat',
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(
+                                                0xFFFFFDF3,
+                                              ).withOpacity(
+                                                index == 1 ? 0.9 : 0.5,
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -127,7 +159,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                             weather['tanggal'],
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontFamily: 'Montserrat',
+                                              fontFamily: 'Poppins',
                                             ),
                                           ),
                                           const SizedBox(height: 8),
@@ -138,9 +170,12 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                           const SizedBox(height: 8),
                                           Text(
                                             "${weather['suhu']}°",
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontFamily: 'Montserrat',
+                                            style: GoogleFonts.poppins(
+                                              fontWeight:
+                                                  FontWeight.w300, // Light
+                                              color: const Color(0xFFFFFDF3),
+                                              fontSize:
+                                                  16, // Sesuaikan jika perlu
                                             ),
                                           ),
                                         ],
@@ -165,7 +200,6 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                               Colors.white70,
                                             ],
                                           ),
-
                                           barWidth: 2,
                                           spots: List.generate(
                                             suhuList.length,
@@ -181,17 +215,25 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                   ),
                                 ),
                                 const SizedBox(height: 20),
-                                WeatherActionButton(
-                                  icon: Icons.arrow_forward,
-                                  label: "Lihat ke halaman awal",
-                                  onPressed: () {
-                                    Navigator.pushNamedAndRemoveUntil(
-                                      context,
-                                      '/',
-                                      (route) => false,
-                                    );
-                                  },
-                                ),
+                                isFavorite
+                                    ? WeatherActionButton(
+                                      icon: Icons.arrow_forward,
+                                      label: "Lihat ke halaman awal",
+                                      onPressed: () {
+                                        Navigator.pushNamedAndRemoveUntil(
+                                          context,
+                                          '/',
+                                          (route) => false,
+                                        );
+                                      },
+                                    )
+                                    : WeatherActionButton(
+                                      icon: Icons.add,
+                                      label: "Tambahkan ke favorit",
+                                      onPressed: () {
+                                        if (city != null) toggleFavorite(city);
+                                      },
+                                    ),
                               ],
                             ),
                           ),
