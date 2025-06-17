@@ -9,7 +9,8 @@ class SearchCityPage extends StatefulWidget {
   _SearchCityPageState createState() => _SearchCityPageState();
 }
 
-class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAliveClientMixin<SearchCityPage> {
+class _SearchCityPageState extends State<SearchCityPage>
+    with AutomaticKeepAliveClientMixin<SearchCityPage> {
   static const String _favoriteCitiesKey = 'favorite_cities';
   late SharedPreferences _prefs;
   final TextEditingController _searchController = TextEditingController();
@@ -59,18 +60,21 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
     setState(() => _isLoading = true);
 
     try {
-      final response = await http.get(Uri.parse('https://myporto.site/api/suggestions?query=$query'));
+      final response = await http.get(
+        Uri.parse('https://myporto.site/api/suggestions?query=$query'),
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as List;
         if (!mounted) return;
         setState(() {
-          _suggestions = data.map<Map<String, String>>((e) {
-            return {
-              'name': e['name'].toString(),
-              'region': e['full'].toString(),
-            };
-          }).toList();
+          _suggestions =
+              data.map<Map<String, String>>((e) {
+                return {
+                  'name': e['name'].toString(),
+                  'region': e['full'].toString(),
+                };
+              }).toList();
         });
       } else {
         throw Exception('Gagal mengambil saran lokasi');
@@ -97,7 +101,12 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
     }
   }
 
-  List<Widget> _buildEmptySearchContent(Color textColor, Color subTextColor, Color cardColor, bool isLight) {
+  List<Widget> _buildEmptySearchContent(
+    Color textColor,
+    Color subTextColor,
+    Color cardColor,
+    bool isLight,
+  ) {
     if (favoriteCities.isNotEmpty) {
       return [
         const SizedBox(height: 10),
@@ -109,24 +118,50 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 14.0,
+                  ),
                   decoration: BoxDecoration(
                     color: cardColor,
                     borderRadius: BorderRadius.circular(16.0),
-                    boxShadow: isLight
-                        ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16.0, offset: Offset(0, 4))]
-                        : [],
+                    boxShadow:
+                        isLight
+                            ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 16.0,
+                                offset: Offset(0, 4),
+                              ),
+                            ]
+                            : [],
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, color: Colors.orangeAccent),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        color: Colors.orangeAccent,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(city, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: textColor)),
-                            Text("Jawa Timur, Indonesia", style: TextStyle(fontSize: 13, color: subTextColor)),
+                            Text(
+                              city,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: textColor,
+                              ),
+                            ),
+                            Text(
+                              "Jawa Timur, Indonesia",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: subTextColor,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -156,11 +191,21 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
     }
   }
 
-  Widget _buildSearchResultsContent(Color textColor, Color subTextColor, Color cardColor, bool isLight) {
+  Widget _buildSearchResultsContent(
+    Color textColor,
+    Color subTextColor,
+    Color cardColor,
+    bool isLight,
+  ) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
     if (_suggestions.isEmpty && _searchController.text.length >= 3) {
-      return Center(child: Text("Tidak ada hasil ditemukan.", style: TextStyle(color: subTextColor)));
+      return Center(
+        child: Text(
+          "Tidak ada hasil ditemukan.",
+          style: TextStyle(color: subTextColor),
+        ),
+      );
     }
 
     return Expanded(
@@ -173,15 +218,43 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
             decoration: BoxDecoration(
               color: cardColor,
               borderRadius: BorderRadius.circular(12.0),
-              boxShadow: isLight ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16.0, offset: Offset(0, 4))] : [],
+              boxShadow:
+                  isLight
+                      ? [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 16.0,
+                          offset: Offset(0, 4),
+                        ),
+                      ]
+                      : [],
             ),
             child: ListTile(
-              title: Text(item['name'] ?? '', style: TextStyle(color: textColor)),
-              subtitle: Text(item['region'] ?? '', style: TextStyle(color: subTextColor, fontSize: 12)),
-              trailing: Icon(Icons.add, color: subTextColor),
+              title: Text(
+                item['name'] ?? '',
+                style: TextStyle(color: textColor),
+              ),
+              subtitle: Text(
+                item['region'] ?? '',
+                style: TextStyle(color: subTextColor, fontSize: 12),
+              ),
+              trailing: IconButton(
+                icon: Icon(Icons.add, color: subTextColor),
+                onPressed: () {
+                  _addFavoriteCity(item['name'] ?? '');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item['name']} ditambahkan ke favorit'),
+                    ),
+                  );
+                },
+              ),
               onTap: () {
-                _addFavoriteCity(item['name'] ?? '');
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${item['name']} ditambahkan ke favorit')));
+                Navigator.pushNamed(
+                  context,
+                  '/preview',
+                  arguments: item['name'], 
+                );
               },
             ),
           );
@@ -210,7 +283,10 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(icon: Icon(Icons.arrow_back, color: textColor), onPressed: () => Navigator.pop(context)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text('Kelola Kota', style: TextStyle(color: textColor)),
       ),
       body: Padding(
@@ -221,7 +297,16 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: BorderRadius.circular(30.0),
-                boxShadow: isLight ? [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 16.0, offset: Offset(0, 4))] : [],
+                boxShadow:
+                    isLight
+                        ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 16.0,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                        : [],
               ),
               child: TextField(
                 controller: _searchController,
@@ -245,9 +330,19 @@ class _SearchCityPageState extends State<SearchCityPage> with AutomaticKeepAlive
             ),
             const SizedBox(height: 20),
             if (_searchController.text.isEmpty)
-              ..._buildEmptySearchContent(textColor, subTextColor, cardColor, isLight)
+              ..._buildEmptySearchContent(
+                textColor,
+                subTextColor,
+                cardColor,
+                isLight,
+              )
             else
-              _buildSearchResultsContent(textColor, subTextColor, cardColor, isLight),
+              _buildSearchResultsContent(
+                textColor,
+                subTextColor,
+                cardColor,
+                isLight,
+              ),
           ],
         ),
       ),
