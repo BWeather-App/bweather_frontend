@@ -3,14 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cuaca/route.dart';
 
 class WeatherModel {
-  static Future<Map<String, dynamic>?> loadWeatherData(
-    BuildContext context,
-    void Function(bool) setLoading,
-  ) async {
+  // State global yang bisa diakses dari mana saja
+  static final ValueNotifier<Map<String, dynamic>?> weatherData = ValueNotifier(
+    null,
+  );
+  static final ValueNotifier<bool> isLoading = ValueNotifier(true);
+
+  // Fungsi untuk memuat data cuaca berdasarkan lokasi saat ini
+  static Future<void> loadWeatherData(BuildContext context) async {
+    isLoading.value = true;
+
     final granted = await PermissionService.requestLocationPermission(context);
     if (!granted) {
-      setLoading(false);
-      return null;
+      isLoading.value = false;
+      return;
     }
 
     try {
@@ -19,19 +25,21 @@ class WeatherModel {
         position.latitude,
         position.longitude,
       );
-      setLoading(false);
-      return result;
+
+      weatherData.value = result;
     } catch (e) {
-      debugPrint('Gagal memuat data cuaca: \$e');
-      setLoading(false);
-      return null;
+      debugPrint('Gagal memuat data cuaca: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
+  // Deskripsi kondisi cuaca berdasarkan nilai suhu, kelembapan, dan peluang hujan
   static String getWeatherDescription(Map<String, dynamic> weather) {
-    final temp = weather['suhu'] ?? 0;
-    final humidity = weather['kelembapan'] ?? 0;
-    final rainChance = weather['peluang_hujan'] ?? 0;
+    final weatherDetail = weather['weather'] ?? {};
+    final temp = weatherDetail['suhu'] ?? 0;
+    final humidity = weatherDetail['kelembapan'] ?? 0;
+    final rainChance = weatherDetail['peluang_hujan'] ?? 0;
 
     if (rainChance > 80) return "Hujan Lebat";
     if (rainChance > 50) return "Hujan Ringan";
@@ -41,6 +49,7 @@ class WeatherModel {
     return "Berawan";
   }
 
+  // Mendapatkan path ikon berdasarkan kondisi cuaca
   static String getIconAsset(dynamic condition, bool isDark) {
     final base = "assets/icons/";
     final map = {
@@ -49,8 +58,8 @@ class WeatherModel {
       "clouds": "cloudy",
       "berawan": "cloudy",
       "berawan dan lembab": "cloudy",
-      "rain": "rain",
-      "hujan ringan": "rain",
+      "rain": "rainy",
+      "hujan ringan": "rainy",
       "hujan lebat": "storm",
       "drizzle": "drizzle",
       "thunderstorm": "storm",
