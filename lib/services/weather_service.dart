@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'notification_service.dart';
 
 Future<bool> cekKoneksiInternet() async {
   var connectivityResult = await Connectivity().checkConnectivity();
@@ -27,7 +28,7 @@ class WeatherService {
     prefs = await SharedPreferences.getInstance();
   }
   final String _baseUrl =
-      'https://myporto.site/bweather-backend/public/index.php';
+      'https://myporto.site';
 
   // 🔍 Ambil data cuaca berdasarkan kota
   Future<Map<String, dynamic>> getWeatherByCity(String city) async {
@@ -58,7 +59,7 @@ class WeatherService {
 
     if (cekKoneksi) {
       final url = Uri.parse(
-        '$_baseUrl?endpoint=weather&latitude=$lat&longitude=$lon',
+        '$_baseUrl/api/weather?lat=$lat&lon=$lon',
       );
       final response = await http.get(url);
 
@@ -74,7 +75,28 @@ class WeatherService {
 
       // Simpan data ke Hive
       await box.put(key, data);
+      final weather = data['weather']; // sesuai struktur respons kamu
+      final lokasi = data['location'];
 
+      // Cek apakah memenuhi salah satu kriteria cuaca ekstrem
+      final double suhu = weather['cuaca_saat_ini']['suhu']?.toDouble() ?? 0;
+      final double angin = weather['cuaca_saat_ini']['kecepatan_angin']?.toDouble() ?? 0;
+      final double tekanan = weather['cuaca_saat_ini']['tekanan_udara']?.toDouble() ?? 1000;
+      final int peluangHujan = weather['cuaca_saat_ini']['peluang_hujan'] ?? 0;
+      final int uv = weather['cuaca_saat_ini']['indeks_uv'] ?? 0;
+
+      bool isEkstrem = suhu < 10 || suhu > 35 || 
+                      angin > 11 || 
+                      tekanan < 900 || 
+                      peluangHujan > 80 || 
+                      uv >= 8;
+
+      if (isEkstrem) {
+        await NotificationService.showCuacaEkstrem(
+          lokasi['city'] ?? 'Lokasi tidak diketahui',
+          'Cuaca ekstrem terdeteksi!\nSuhu: $suhu°C\nAngin: ${angin.toStringAsFixed(1)} m/s\nUV: $uv',
+        );
+      }
       return data;
     } else {
       // MODE OFFLINE: ambil dari Hive
