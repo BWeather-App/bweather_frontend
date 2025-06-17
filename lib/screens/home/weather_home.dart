@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_cuaca/route.dart';
+import 'dart:ui';
 
 class WeatherHomePage extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -17,13 +18,15 @@ class WeatherHomePage extends StatefulWidget {
 }
 
 class _WeatherHomePageState extends State<WeatherHomePage> {
-  final ScrollController _scrollController = ScrollController();
+  // final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     WeatherModel.loadWeatherData(context);
   }
+
+  // bool _isSearchOpen = false;
 
   String formatTime(String? t) {
     if (t == null) return '-';
@@ -70,10 +73,15 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const SearchCityPage(),
+                          builder: (context) => SearchCityPage(),
                         ),
                       );
                     },
+                    // onAddCity: () {
+                    //   // setState(() {
+                    //   //   _isSearchOpen = true;
+                    //   // });
+                    // },
                     onToggleTheme: widget.onToggleTheme,
                   ),
 
@@ -84,7 +92,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // SUHU
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,16 +117,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             ],
                           ),
                           const SizedBox(height: 8),
-
-                          // DESKRIPSI CUACA
                           Text(
                             WeatherModel.getWeatherDescription((weather)),
                             style: TextStyle(color: textColor, fontSize: 18),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 20),
-
-                          // KECEPATAN ANGIN
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -137,11 +140,9 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       ),
                     ),
 
-                  // === LOADING INDICATOR ===
                   if (isLoading)
                     const Center(child: CircularProgressIndicator()),
 
-                  // === ERROR STATE ===
                   if (!isLoading && weatherData == null)
                     Center(
                       child: Text(
@@ -150,7 +151,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       ),
                     ),
 
-                  // === DRAGGABLE BOTTOM SHEET ===
                   if (!isLoading && weatherData != null)
                     DraggableScrollableSheet(
                       initialChildSize: 0.25,
@@ -171,6 +171,26 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                         );
                       },
                     ),
+
+                  // === BACKDROP & SEARCH ===
+                  // if (_isSearchOpen) ...[
+                  //   BackdropFilter(
+                  //     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  //     child: Container(color: Colors.black.withOpacity(0.2)),
+                  //   ),
+                  //   Positioned.fill(
+                  //     child: Material(
+                  //       color: Colors.transparent,
+                  //       child: SearchCityPageOverlay(
+                  //         onClose: () {
+                  //           setState(() {
+                  //             _isSearchOpen = false;
+                  //           });
+                  //         },
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ],
                 ],
               );
             },

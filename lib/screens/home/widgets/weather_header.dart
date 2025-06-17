@@ -25,7 +25,6 @@ class WeatherHeader extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Spacer(),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
