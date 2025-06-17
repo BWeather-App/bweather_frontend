@@ -4,7 +4,6 @@ import '../services/weather_service.dart';
 import '../services/permission_service.dart';
 import '../services/location_service.dart';
 import 'search_city_page.dart';
-import 'manage_city_page.dart';
 
 class WeatherHomePage extends StatefulWidget {
   final VoidCallback onToggleTheme;

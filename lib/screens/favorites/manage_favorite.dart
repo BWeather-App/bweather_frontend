@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../favorite_city_helper.dart';
+import '../../helpers/favorite_city_helper.dart';
 
 class ManageCityPage extends StatefulWidget {
   const ManageCityPage({super.key});
