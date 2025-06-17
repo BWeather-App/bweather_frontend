@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WeatherService {
-  final String _baseUrl = 'http://10.0.2.2:8000';
+  final String _baseUrl = 'https://myporto.site';
 
   Future<Map<String, dynamic>> getWeatherByCity(String city) async {
-    final url = Uri.parse('$_baseUrl/search?query=$city');
+    final url = Uri.parse('$_baseUrl/api/search?query=$city');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -25,7 +25,9 @@ class WeatherService {
     double lat,
     double lon,
   ) async {
-    final url = Uri.parse('$_baseUrl/weather?lat=$lat&lon=$lon');
+    final url = Uri.parse('$_baseUrl/api/weather?lat=$lat&lon=$lon');
+    print('Memanggil $_baseUrl/api/weather?lat=$lat&lon=$lon');
+
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -43,7 +45,7 @@ class WeatherService {
   }
 
   Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
-    final url = Uri.parse('$_baseUrl/suggestions?query=$query');
+    final url = Uri.parse('$_baseUrl/api/suggestions?query=$query');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {

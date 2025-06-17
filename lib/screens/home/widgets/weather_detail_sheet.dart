@@ -1,8 +1,10 @@
 // weather_detail_sheet.dart
 import 'package:flutter/material.dart';
 // import 'package:intl/intl.dart';
-import 'package:flutter_cuaca/route.dart';
+// import 'package:flutter_cuaca/route.dart';
 import 'dart:ui';
+
+import 'package:flutter_cuaca/route.dart';
 
 class WeatherDetailSheet extends StatelessWidget {
   final ScrollController scrollController;
@@ -46,8 +48,6 @@ class WeatherDetailSheet extends StatelessWidget {
                 getWeatherDescription: getWeatherDescription,
                 getIconAsset: getIconAsset,
               ),
-
-              const SizedBox(height: 16),
             ],
           ),
         ),

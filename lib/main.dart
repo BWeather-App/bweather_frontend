@@ -85,10 +85,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {
-        // '/city-weather': (context) => SearchCityPage(),
-        '/preview': (context) => const CityWeatherPreviewPage(),
-      },
+      routes: {'/city-weather': (context) => CityWeatherPreviewPage()},
       home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }

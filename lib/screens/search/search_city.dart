@@ -1,350 +1,444 @@
-import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:hive/hive.dart';
+import 'package:flutter_cuaca/route.dart';
 
 class SearchCityPage extends StatefulWidget {
+  const SearchCityPage({super.key});
+
   @override
-  _SearchCityPageState createState() => _SearchCityPageState();
+  State<SearchCityPage> createState() => _SearchCityPageState();
 }
 
-class _SearchCityPageState extends State<SearchCityPage>
-    with AutomaticKeepAliveClientMixin<SearchCityPage> {
-  static const String _favoriteCitiesKey = 'favorite_cities';
-  late SharedPreferences _prefs;
-  final TextEditingController _searchController = TextEditingController();
-  List<Map<String, String>> _suggestions = [];
+class _SearchCityPageState extends State<SearchCityPage> {
+  final TextEditingController _controller = TextEditingController();
+  List<String> _searchHistory = [];
+  List<dynamic> _suggestions = [];
   bool _isLoading = false;
-  Timer? _debounce;
-  List<String> favoriteCities = [];
+  bool _selectMode = false;
+  Set<String> _selectedHistory = {};
 
-  @override
-  bool get wantKeepAlive => true;
+  late Box _weatherBox;
+  List<Map<String, String>> _favoriteCities = [];
 
   @override
   void initState() {
     super.initState();
-    _initSharedPreferences();
+    _loadSearchHistory();
+    _initHive();
   }
 
-  Future<void> _initSharedPreferences() async {
-    _prefs = await SharedPreferences.getInstance();
-    _loadFavoriteCities();
-  }
-
-  void _loadFavoriteCities() {
+  Future<void> _initHive() async {
+    _weatherBox = Hive.box('weatherBox');
+    final saved = _weatherBox.get('favorites', defaultValue: []);
     setState(() {
-      favoriteCities = _prefs.getStringList(_favoriteCitiesKey) ?? [];
+      _favoriteCities = List<Map<String, String>>.from(
+        (saved as List).map((e) => Map<String, String>.from(e)),
+      );
     });
   }
 
-  Future<void> _addFavoriteCity(String city) async {
-    if (!favoriteCities.contains(city)) {
-      favoriteCities.add(city);
-      await _prefs.setStringList(_favoriteCitiesKey, favoriteCities);
-      _loadFavoriteCities();
+  void _addToFavorites(String city, String region) {
+    final exists = _favoriteCities.any((item) => item['full'] == region);
+    if (!exists) {
+      setState(() {
+        _favoriteCities.add({'name': city, 'full': region});
+        _weatherBox.put('favorites', _favoriteCities);
+      });
     }
   }
 
-  Future<void> _removeFavoriteCity(String city) async {
-    if (favoriteCities.contains(city)) {
-      favoriteCities.remove(city);
-      await _prefs.setStringList(_favoriteCitiesKey, favoriteCities);
-      _loadFavoriteCities();
-    }
+  Future<void> _loadSearchHistory() async {
+    final history = await getSearchHistory();
+    setState(() {
+      _searchHistory = history;
+    });
   }
 
-  Future<void> fetchSuggestions(String query) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
+  Future<void> _onSearch(String city) async {
+    if (city.trim().isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    await saveSearchHistory(city);
+    await _loadSearchHistory();
 
     try {
+      final encodedCity = Uri.encodeComponent(city);
       final response = await http.get(
-        Uri.parse('https://myporto.site/api/suggestions?query=$query'),
+        Uri.parse('https://myporto.site/api/suggestions?query=$encodedCity'),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body) as List;
-        if (!mounted) return;
+        final data = jsonDecode(response.body);
         setState(() {
-          _suggestions =
-              data.map<Map<String, String>>((e) {
-                return {
-                  'name': e['name'].toString(),
-                  'region': e['full'].toString(),
-                };
-              }).toList();
+          _suggestions = data;
         });
-      } else {
-        throw Exception('Gagal mengambil saran lokasi');
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Gagal mengambil saran lokasi")),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    } catch (_) {}
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    FocusScope.of(context).unfocus();
   }
 
-  void _onSearch(String value) {
-    if (_debounce?.isActive ?? false) _debounce?.cancel();
-    if (value.length >= 3) {
-      _debounce = Timer(const Duration(milliseconds: 500), () {
-        fetchSuggestions(value);
-      });
-    } else {
-      setState(() => _suggestions.clear());
-    }
+  Future<void> _clearAllHistory() async {
+    await clearSearchHistory();
+    _selectedHistory.clear();
+    _selectMode = false;
+    _loadSearchHistory();
   }
 
-  List<Widget> _buildEmptySearchContent(
+  Future<void> _deleteSelectedHistory() async {
+    final updated = List<String>.from(_searchHistory)
+      ..removeWhere((item) => _selectedHistory.contains(item));
+    await updateSearchHistory(updated);
+    _selectedHistory.clear();
+    _selectMode = false;
+    _loadSearchHistory();
+  }
+
+  Widget _buildCityItem(
+    String city,
+    String region,
     Color textColor,
-    Color subTextColor,
+    Color subtitleColor,
     Color cardColor,
-    bool isLight,
+    Color iconColor,
   ) {
-    if (favoriteCities.isNotEmpty) {
-      return [
-        const SizedBox(height: 10),
-        Expanded(
-          child: ListView.builder(
-            itemCount: favoriteCities.length,
-            itemBuilder: (context, index) {
-              final city = favoriteCities[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 14.0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16.0),
-                    boxShadow:
-                        isLight
-                            ? [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 16.0,
-                                offset: Offset(0, 4),
-                              ),
-                            ]
-                            : [],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.location_on_outlined,
-                        color: Colors.orangeAccent,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              city,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: textColor,
-                              ),
-                            ),
-                            Text(
-                              "Jawa Timur, Indonesia",
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: subTextColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete_outline, color: subTextColor),
-                        onPressed: () => _removeFavoriteCity(city),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+    final alreadyFavorite = _favoriteCities.any((c) => c['full'] == region);
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: ListTile(
+        title: Text(
+          city,
+          style: GoogleFonts.poppins(
+            color: textColor,
+            fontWeight: FontWeight.w500,
           ),
         ),
-      ];
-    } else {
-      return [
-        const SizedBox(height: 20),
-        Center(
-          child: Text(
-            "Belum ada kota favorit. Cari dan tambahkan kota favorit Anda.",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: subTextColor),
+        subtitle: Text(
+          region,
+          style: GoogleFonts.poppins(
+            color: subtitleColor,
+            fontWeight: FontWeight.w300,
+            fontSize: 12,
           ),
         ),
-      ];
-    }
-  }
-
-  Widget _buildSearchResultsContent(
-    Color textColor,
-    Color subTextColor,
-    Color cardColor,
-    bool isLight,
-  ) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-
-    if (_suggestions.isEmpty && _searchController.text.length >= 3) {
-      return Center(
-        child: Text(
-          "Tidak ada hasil ditemukan.",
-          style: TextStyle(color: subTextColor),
+        trailing: IconButton(
+          icon: Icon(
+            alreadyFavorite ? Icons.check : Icons.add,
+            color: alreadyFavorite ? Colors.greenAccent : iconColor,
+          ),
+          onPressed: () => _addToFavorites(city, region), // ✅ penting!
         ),
-      );
-    }
-
-    return Expanded(
-      child: ListView.builder(
-        itemCount: _suggestions.length,
-        itemBuilder: (context, index) {
-          final item = _suggestions[index];
-          return Container(
-            margin: const EdgeInsets.only(bottom: 8.0),
-            decoration: BoxDecoration(
-              color: cardColor,
-              borderRadius: BorderRadius.circular(12.0),
-              boxShadow:
-                  isLight
-                      ? [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 16.0,
-                          offset: Offset(0, 4),
-                        ),
-                      ]
-                      : [],
-            ),
-            child: ListTile(
-              title: Text(
-                item['name'] ?? '',
-                style: TextStyle(color: textColor),
-              ),
-              subtitle: Text(
-                item['region'] ?? '',
-                style: TextStyle(color: subTextColor, fontSize: 12),
-              ),
-              trailing: IconButton(
-                icon: Icon(Icons.add, color: subTextColor),
-                onPressed: () {
-                  _addFavoriteCity(item['name'] ?? '');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${item['name']} ditambahkan ke favorit'),
-                    ),
-                  );
-                },
-              ),
-              onTap: () {
-                Navigator.pushNamed(
-                  context,
-                  '/preview',
-                  arguments: item['name'], 
-                );
-              },
-            ),
-          );
+        onTap: () async {
+          await saveSearchHistory(region);
+          Navigator.pushNamed(context, '/city-weather', arguments: region);
         },
       ),
     );
   }
 
   @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    super.build(context);
-    final isLight = Theme.of(context).brightness == Brightness.light;
-    final textColor = isLight ? const Color(0xFF232B3E) : Colors.white;
-    final subTextColor = isLight ? Colors.black54 : Colors.white54;
-    final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final backgroundColor = Colors.transparent;
+    final blurBackgroundColor =
+        isDark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.black.withOpacity(0.05);
+    final textColor = isDark ? Colors.white : Colors.black;
+    final hintColor = isDark ? Colors.white38 : Colors.black38;
+    final iconColor = isDark ? Colors.white70 : Colors.black54;
+    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
+    final inputBoxColor =
+        isDark
+            ? Colors.white.withOpacity(0.15)
+            : Colors.black.withOpacity(0.05);
+    final cardColor =
+        isDark
+            ? Colors.white.withOpacity(0.05)
+            : Colors.black.withOpacity(0.03);
+    final selectedCardColor =
+        isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.1);
+
+    final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('Kelola Kota', style: TextStyle(color: textColor)),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(30.0),
-                boxShadow:
-                    isLight
-                        ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 16.0,
-                            offset: Offset(0, 4),
-                          ),
-                        ]
-                        : [],
+      backgroundColor: backgroundColor,
+      body: Stack(
+        children: [
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+            child: Container(color: blurBackgroundColor),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
               ),
-              child: TextField(
-                controller: _searchController,
-                style: TextStyle(color: textColor),
-                onChanged: _onSearch,
-                decoration: InputDecoration(
-                  hintText: "Cari kota...",
-                  hintStyle: TextStyle(color: subTextColor),
-                  prefixIcon: Icon(Icons.search, color: subTextColor),
-                  border: InputBorder.none,
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.close, color: subTextColor),
-                    onPressed: () {
-                      _searchController.clear();
-                      _onSearch('');
-                    },
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: inputBoxColor,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.search, color: iconColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            style: GoogleFonts.poppins(
+                              color: textColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Cari lokasi',
+                              hintStyle: GoogleFonts.poppins(
+                                color: hintColor,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              border: InputBorder.none,
+                            ),
+                            onSubmitted: _onSearch,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: hintColor),
+                          onPressed: () => _controller.clear(),
+                        ),
+                      ],
+                    ),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14.0),
-                ),
+                  const SizedBox(height: 16),
+                  if (_isLoading)
+                    Center(child: CircularProgressIndicator(color: textColor)),
+                  if (!_isLoading && _suggestions.isNotEmpty)
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _suggestions.length,
+                        itemBuilder: (context, index) {
+                          final item = _suggestions[index];
+                          return _buildCityItem(
+                            item['name'],
+                            item['full'] ?? item['name'],
+                            textColor,
+                            subtitleColor,
+                            cardColor,
+                            iconColor,
+                          );
+                        },
+                      ),
+                    ),
+                  if (!isKeyboardVisible &&
+                      !_isLoading &&
+                      _favoriteCities.isNotEmpty)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Lokasi Favorit",
+                            style: GoogleFonts.poppins(
+                              color: subtitleColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _favoriteCities.length,
+                              itemBuilder: (context, index) {
+                                final city = _favoriteCities[index];
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cardColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: ListTile(
+                                    leading: const Icon(Icons.star),
+                                    title: Text(
+                                      city['name'] ?? '',
+                                      style: GoogleFonts.poppins(
+                                        color: textColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      city['full'] ?? '',
+                                      style: GoogleFonts.poppins(
+                                        color: subtitleColor,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pushNamed(
+                                        context,
+                                        '/city-weather',
+                                        arguments: city['full'],
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  if (isKeyboardVisible &&
+                      !_isLoading &&
+                      _suggestions.isEmpty &&
+                      _searchHistory.isNotEmpty)
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Riwayat Pencarian",
+                            style: GoogleFonts.poppins(
+                              color: subtitleColor,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: _searchHistory.length,
+                              itemBuilder: (context, index) {
+                                final city = _searchHistory[index];
+                                final isSelected = _selectedHistory.contains(
+                                  city,
+                                );
+
+                                return GestureDetector(
+                                  onLongPress: () {
+                                    setState(() {
+                                      _selectMode = true;
+                                      _selectedHistory.add(city);
+                                    });
+                                  },
+                                  onTap: () {
+                                    if (_selectMode) {
+                                      setState(() {
+                                        isSelected
+                                            ? _selectedHistory.remove(city)
+                                            : _selectedHistory.add(city);
+                                        if (_selectedHistory.isEmpty)
+                                          _selectMode = false;
+                                      });
+                                    } else {
+                                      _controller.text = city;
+                                      _onSearch(city);
+                                    }
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                      horizontal: 4,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isSelected
+                                              ? selectedCardColor
+                                              : cardColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.history, color: iconColor),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            city,
+                                            style: GoogleFonts.poppins(
+                                              color: textColor,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _clearAllHistory,
+                                icon: Icon(
+                                  Icons.delete_sweep,
+                                  color: iconColor,
+                                ),
+                                label: Text(
+                                  "Hapus Semua",
+                                  style: GoogleFonts.poppins(
+                                    color: iconColor,
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                              if (_selectMode)
+                                TextButton.icon(
+                                  onPressed: _deleteSelectedHistory,
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.redAccent,
+                                  ),
+                                  label: Text(
+                                    "Hapus Terpilih",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            if (_searchController.text.isEmpty)
-              ..._buildEmptySearchContent(
-                textColor,
-                subTextColor,
-                cardColor,
-                isLight,
-              )
-            else
-              _buildSearchResultsContent(
-                textColor,
-                subTextColor,
-                cardColor,
-                isLight,
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

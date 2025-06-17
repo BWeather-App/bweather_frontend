@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "602854125619",
+    "project_id": "bweather-app",
+    "storage_bucket": "bweather-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:602854125619:android:4753f76f6f6d38429ef346",
+        "android_client_info": {
+          "package_name": "com.bweather.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBsMOn6BA5RJIff1QOVp49KcR6pXLTzERI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

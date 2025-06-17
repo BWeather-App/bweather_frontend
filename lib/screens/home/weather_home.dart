@@ -26,8 +26,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     WeatherModel.loadWeatherData(context);
   }
 
-  // bool _isSearchOpen = false;
-
   String formatTime(String? t) {
     if (t == null) return '-';
     final dt = DateTime.tryParse(t);
@@ -49,7 +47,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
             valueListenable: WeatherModel.weatherData,
             builder: (context, weatherData, _) {
               final weather = weatherData?['weather']?['cuaca_saat_ini'] ?? {};
-
               final forecastList = [
                 if ((weatherData?['weather']?['kemarin'] ?? []).isNotEmpty)
                   weatherData!['weather']['kemarin'][0],
@@ -65,27 +62,40 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
 
               return Stack(
                 children: [
-                  // === HEADER TETAP DI ATAS ===
                   WeatherHeader(
                     location: weatherData?['location'],
                     isLight: isLight,
-                    onAddCity: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SearchCityPage(),
-                        ),
+                    onAddCity: () async {
+                      final result = await showGeneralDialog<String>(
+                        context: context,
+                        barrierDismissible: true,
+                        barrierLabel: "Search",
+                        barrierColor: Colors.transparent,
+                        pageBuilder: (_, __, ___) => const SearchCityPage(),
+                        transitionBuilder: (
+                          context,
+                          animation,
+                          secondaryAnimation,
+                          child,
+                        ) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        transitionDuration: const Duration(milliseconds: 200),
                       );
+
+                      if (result != null && result.isNotEmpty) {
+                        // Lakukan sesuatu dengan nama kota yang dipilih
+                        print("Kota dipilih: $result");
+                        // Misalnya tambahkan ke daftar kota, panggil API, dsb.
+                      }
                     },
-                    // onAddCity: () {
-                    //   // setState(() {
-                    //   //   _isSearchOpen = true;
-                    //   // });
-                    // },
+
                     onToggleTheme: widget.onToggleTheme,
                   ),
 
-                  // === KONTEN TENGAH (SUHU, DESKRIPSI, ANGIN) ===
                   if (!isLoading && weatherData != null)
                     Align(
                       alignment: Alignment.center,
@@ -171,26 +181,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                         );
                       },
                     ),
-
-                  // === BACKDROP & SEARCH ===
-                  // if (_isSearchOpen) ...[
-                  //   BackdropFilter(
-                  //     filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  //     child: Container(color: Colors.black.withOpacity(0.2)),
-                  //   ),
-                  //   Positioned.fill(
-                  //     child: Material(
-                  //       color: Colors.transparent,
-                  //       child: SearchCityPageOverlay(
-                  //         onClose: () {
-                  //           setState(() {
-                  //             _isSearchOpen = false;
-                  //           });
-                  //         },
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ],
                 ],
               );
             },
