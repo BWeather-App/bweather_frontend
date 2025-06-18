@@ -324,65 +324,11 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                 ),
                               ),
 
-                              // Header
-                              // Container(
-                              //   padding: const EdgeInsets.symmetric(
-                              //     horizontal: 20,
-                              //     vertical: 12,
-                              //   ),
-                              //   decoration: BoxDecoration(
-                              //     gradient: LinearGradient(
-                              //       begin: Alignment.topCenter,
-                              //       end: Alignment.bottomCenter,
-                              //       colors: [
-                              //         Colors.white.withOpacity(0.15),
-                              //         Colors.white.withOpacity(0.05),
-                              //       ],
-                              //     ),
-                              //     border: Border(
-                              //       bottom: BorderSide(
-                              //         color: Colors.white.withOpacity(0.2),
-                              //         width: 0.5,
-                              //       ),
-                              //     ),
-                              //   ),
-                                // child: Row(
-                                //   children: [
-                                //     const Icon(
-                                //       Icons.wb_cloudy,
-                                //       color: Colors.white,
-                                //       size: 24,
-                                //     ),
-                                //     const SizedBox(width: 12),
-                                //     const Text(
-                                //       'Detail Cuaca',
-                                //       style: TextStyle(
-                                //         color: Colors.white,
-                                //         fontSize: 18,
-                                //         fontWeight: FontWeight.w600,
-                                //       ),
-                                //     ),
-                                //     const Spacer(),
-                                //     Container(
-                                //       decoration: BoxDecoration(
-                                //         shape: BoxShape.circle,
-                                //         color: Colors.white.withOpacity(0.1),
-                                //       ),
-                                //       child: IconButton(
-                                //         onPressed: () => Navigator.pop(context),
-                                //         icon: const Icon(
-                                //           Icons.close,
-                                //           color: Colors.white,
-                                //           size: 20,
-                                //         ),
-                                //       ),
-                                //     ),
-                                //   ],
-                                // ),
-                              // ),
-
                               // Weather Detail Content
-                              const Expanded(child: WeatherDetailSheet()),
+                              const Expanded(
+                                child: WeatherDetailSheet(
+                                  weatherData: data,
+                              ),
                             ],
                           ),
                         ),
