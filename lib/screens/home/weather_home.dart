@@ -119,7 +119,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                     children: [
                                       if (mainCondition != null) ...[
                                         Image.asset(
-                                          _getIconAsset(
+                                          WeatherModel.getIconAsset(
                                             mainCondition,
                                             !isLight,
                                           ),

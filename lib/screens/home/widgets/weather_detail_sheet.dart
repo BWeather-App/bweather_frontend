@@ -1,6 +1,7 @@
 // weather_detail_sheet.dart
 import 'package:flutter/material.dart';
 // import 'package:flutter_cuaca/route.dart';
+import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:ui';
 import 'package:fl_chart/fl_chart.dart';
@@ -222,8 +223,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
     if (weatherData == null) return Container();
 
     final weather = weatherData!['weather'];
-    final days = ['HARI INI', 'BESOK', 'LUSA', 'H+3'];
     final forecasts = [
+      weather['kemarin'],
       weather['hari_ini'],
       weather['besok'],
       weather['lusa'],
@@ -235,14 +236,15 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(4, (index) {
-            if (index >= forecasts.length ||
-                forecasts[index] == null ||
-                forecasts[index].isEmpty) {
+          children: List.generate(5, (index) {
+            final dayData = forecasts[index] as List?;
+
+            // Default jika kosong
+            if (dayData == null || dayData.isEmpty) {
               return Column(
                 children: [
                   Text(
-                    days[index],
+                    '--',
                     style: const TextStyle(
                       color: Colors.white54,
                       fontSize: 12,
@@ -268,9 +270,14 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
               );
             }
 
-            final dayData = forecasts[index] as List;
-            final midDayData =
-                dayData.isNotEmpty ? dayData[dayData.length ~/ 2] : null;
+            final midDayData = dayData[dayData.length ~/ 2];
+            final waktuStr = midDayData?['waktu'] ?? '';
+            final parsedDate = DateTime.tryParse(waktuStr) ?? DateTime.now();
+
+            final weekday =
+                DateFormat.E('id_ID').format(parsedDate).toUpperCase();
+            final isToday = parsedDate.day == DateTime.now().day;
+
             final temp = midDayData?['suhu']?.round() ?? 0;
             final humidity = midDayData?['kelembapan'] ?? 0;
             final rainChance = midDayData?['peluang_hujan'] ?? 0;
@@ -278,11 +285,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
             return Column(
               children: [
                 Text(
-                  days[index],
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  weekday,
+                  style: TextStyle(
+                    color: isToday ? Colors.white : Colors.white54,
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -297,7 +304,7 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '${temp}°',
+                  '$temp°',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
