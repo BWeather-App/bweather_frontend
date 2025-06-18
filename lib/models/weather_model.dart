@@ -51,6 +51,8 @@ class WeatherModel {
 
   // Mendapatkan path ikon berdasarkan kondisi cuaca
   static String getIconAsset(dynamic condition, bool isDark) {
+    debugPrint("Condition: $condition — isDark: $isDark");
+
     final base = "assets/icons/";
     final map = {
       "clear": "clear",
