@@ -4,9 +4,7 @@ import 'package:flutter_cuaca/route.dart';
 
 class WeatherModel {
   // State global yang bisa diakses dari mana saja
-  static final ValueNotifier<Map<String, dynamic>?> weatherData = ValueNotifier(
-    null,
-  );
+  static final weatherData = ValueNotifier<Map<String, dynamic>>({});
   static final ValueNotifier<bool> isLoading = ValueNotifier(true);
 
   // Fungsi untuk memuat data cuaca berdasarkan lokasi saat ini
@@ -21,12 +19,11 @@ class WeatherModel {
 
     try {
       final position = await LocationService().getCurrentLocation();
-      final result = await WeatherService().getWeatherByLocation(
+      final rawResult = await WeatherService().getWeatherByLocation(
         position.latitude,
         position.longitude,
       );
-
-      weatherData.value = result;
+      weatherData.value = Map<String, dynamic>.from(rawResult);
     } catch (e) {
       debugPrint('Gagal memuat data cuaca: $e');
     } finally {

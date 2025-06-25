@@ -1,6 +1,6 @@
 // weather_detail_sheet.dart
 import 'package:flutter/material.dart';
-// import 'package:flutter_cuaca/route.dart';
+import 'package:flutter_cuaca/route.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:ui';
@@ -220,15 +220,17 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
   }
 
   Widget _buildWeeklyForecast() {
-    if (weatherData == null) return Container();
+    if (weatherData == null || weatherData!['weather'] == null)
+      return Container();
 
-    final weather = weatherData!['weather'];
+    final weather = weatherData!['weather'] as Map<String, dynamic>;
+
     final forecasts = [
-      weather['kemarin'],
-      weather['hari_ini'],
-      weather['besok'],
-      weather['lusa'],
-      weather['hari_ke_3'],
+      weather['kemarin'] ?? [],
+      weather['hari_ini'] ?? [],
+      weather['besok'] ?? [],
+      weather['lusa'] ?? [],
+      weather['hari_ke_3'] ?? [],
     ];
 
     return Column(
@@ -239,26 +241,21 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
           children: List.generate(5, (index) {
             final dayData = forecasts[index] as List?;
 
-            // Default jika kosong
             if (dayData == null || dayData.isEmpty) {
               return Column(
-                children: [
+                children: const [
                   Text(
                     '--',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white54,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Icon(
-                    Icons.help_outline,
-                    color: Colors.white54,
-                    size: 24,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Icon(Icons.help_outline, color: Colors.white54, size: 24),
+                  SizedBox(height: 8),
+                  Text(
                     '--°',
                     style: TextStyle(
                       color: Colors.white54,
@@ -270,7 +267,9 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
               );
             }
 
-            final midDayData = dayData[dayData.length ~/ 2];
+            final midDayData =
+                dayData.isNotEmpty ? dayData[dayData.length ~/ 2] : null;
+
             final waktuStr = midDayData?['waktu'] ?? '';
             final parsedDate = DateTime.tryParse(waktuStr) ?? DateTime.now();
 
@@ -279,8 +278,12 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
             final isToday = parsedDate.day == DateTime.now().day;
 
             final temp = midDayData?['suhu']?.round() ?? 0;
-            final humidity = midDayData?['kelembapan'] ?? 0;
-            final rainChance = midDayData?['peluang_hujan'] ?? 0;
+
+            // 🔥 Gunakan fungsi yang sudah ada
+            final description = WeatherModel.getWeatherDescription({
+              'weather': midDayData,
+            });
+            final iconPath = WeatherModel.getIconAsset(description, false);
 
             return Column(
               children: [
@@ -293,14 +296,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Icon(
-                  _getWeatherIconData(
-                    temp.toDouble(),
-                    humidity.toDouble(),
-                    rainChance.toDouble(),
-                  ),
-                  color: Colors.white,
-                  size: 24,
+                Image.asset(
+                  iconPath,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
                 ),
                 const SizedBox(height: 8),
                 Text(
