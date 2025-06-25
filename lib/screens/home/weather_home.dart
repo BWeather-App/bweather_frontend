@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_cuaca/route.dart';
-import 'dart:ui';
+// import 'dart:ui';
 
 class WeatherHomePage extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -54,26 +54,24 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                     weatherData?['weather']?['cuaca_saat_ini'] ?? {};
                 final forecastList = [
                   if ((weatherData?['weather']?['kemarin'] ?? []).isNotEmpty)
-                    weatherData!['weather']['kemarin'][0],
+                    (weatherData?['weather'] as Map?)?['kemarin'],
                   if ((weatherData?['weather']?['hari_ini'] ?? []).isNotEmpty)
-                    weatherData!['weather']['hari_ini'][0],
+                    (weatherData?['weather'] as Map?)?['hari_ini'],
                   if ((weatherData?['weather']?['besok'] ?? []).isNotEmpty)
-                    weatherData!['weather']['besok'][0],
+                    (weatherData?['weather'] as Map?)?['besok'],
                   if ((weatherData?['weather']?['lusa'] ?? []).isNotEmpty)
-                    weatherData!['weather']['lusa'][0],
+                    (weatherData?['weather'] as Map?)?['lusa'],
                   if ((weatherData?['weather']?['hari_ke_3'] ?? []).isNotEmpty)
-                    weatherData!['weather']['hari_ke_3'][0],
+                    (weatherData?['weather'] as Map?)?['hari_ke_3'],
                 ];
 
                 final current = weatherData?['current'];
                 final lat = weatherData?['location']?['lat'];
                 final lon = weatherData?['location']?['lon'];
 
-                String _getIconAsset(String? condition, bool isDarkMode) {
-                  return WeatherModel.getIconAsset(condition ?? '', isDarkMode);
-                }
+                final description = WeatherModel.getWeatherDescription(weather);
 
-                final String? mainCondition = weatherData?['cuaca'];
+                final mainCondition = weather?['main'] ?? description;
 
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -112,22 +110,22 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (mainCondition != null) ...[
+                                    Image.asset(
+                                      WeatherModel.getIconAsset(
+                                        mainCondition,
+                                        !isLight,
+                                      ),
+                                      width: 80,
+                                      height: 70,
+                                    ),
+                                    const SizedBox(height: 10),
+                                  ],
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      if (mainCondition != null) ...[
-                                        Image.asset(
-                                          WeatherModel.getIconAsset(
-                                            mainCondition,
-                                            !isLight,
-                                          ),
-                                          width: 120,
-                                          height: 120,
-                                        ),
-                                        const SizedBox(height: 10),
-                                      ],
                                       const SizedBox(height: 10),
                                       Text(
                                         "${(weather['suhu'] ?? 0).round()}",
