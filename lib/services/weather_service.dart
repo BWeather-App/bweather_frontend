@@ -4,8 +4,9 @@ import 'package:http/http.dart' as http;
 class WeatherService {
   final String _baseUrl = 'http://10.0.2.2:8000';
 
+  /// Memanggil data cuaca berdasarkan satu nama kota (simple)
   Future<Map<String, dynamic>> getWeatherByCity(String city) async {
-    final url = Uri.parse('$_baseUrl/api/search?query=$city');
+    final url = Uri.parse('$_baseUrl/search?query=$city');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -21,12 +22,13 @@ class WeatherService {
     return data;
   }
 
+  /// Memanggil data cuaca berdasarkan latitude dan longitude
   Future<Map<String, dynamic>> getWeatherByLocation(
     double lat,
     double lon,
   ) async {
-    final url = Uri.parse('$_baseUrl/api/weather?lat=$lat&lon=$lon');
-    print('Memanggil $_baseUrl/api/weather?lat=$lat&lon=$lon');
+    final url = Uri.parse('$_baseUrl/weather?lat=$lat&lon=$lon');
+    print('Memanggil $url');
 
     final response = await http.get(url);
 
@@ -40,12 +42,12 @@ class WeatherService {
       throw Exception('Data cuaca tidak lengkap');
     }
 
-    // ✅ Cast ke Map<String, dynamic> agar cocok dengan return type
     return Map<String, dynamic>.from(data);
   }
 
+  /// Mengambil saran lokasi berdasarkan query
   Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
-    final url = Uri.parse('$_baseUrl/api/suggestions?query=$query');
+    final url = Uri.parse('$_baseUrl/suggestions?query=$query');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {

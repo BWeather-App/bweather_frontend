@@ -14,18 +14,14 @@ Future<void> mintaIzinNotifikasi() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await Future.wait([
-    initializeDateFormatting('id_ID', null),
-    Hive.initFlutter(),
-  ]);
-
+  await initializeDateFormatting('id_ID', null);
   Intl.defaultLocale = 'id_ID';
+  await Hive.initFlutter();
   await Hive.openBox('weatherBox');
-
+  await NotificationService.init();
+  await mintaIzinNotifikasi();
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -46,13 +42,13 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-
-    // Menunda permission + init notif agar tidak menghambat UI build
-    Future.delayed(Duration(milliseconds: 300), () async {
-      await PermissionService.requestLocationPermission(context);
-      await NotificationService.init();
-      await mintaIzinNotifikasi();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermission();
     });
+  }
+
+  void _checkPermission() async {
+    await PermissionService.requestLocationPermission(context);
   }
 
   @override
@@ -89,14 +85,8 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {
-        '/city-weather': (context) => CityWeatherPreviewPage(),
-      },
-      home: WeatherHomePage(
-        onToggleTheme: toggleTheme,
-        isDarkMode: isDarkMode,
-      ),
+      routes: {'/city-weather': (context) => CityWeatherPreviewPage()},
+      home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }
 }
-

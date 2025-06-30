@@ -61,7 +61,7 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
       double lat = position.latitude;
       double lon = position.longitude;
 
-      final url = 'https://myporto.site/api/weather?lat=$lat&lon=$lon';
+      final url = 'http://10.0.2.2:8000/weather?lat=$lat&lon=$lon';
 
       final response = await http.get(Uri.parse(url));
 
@@ -93,39 +93,6 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
     } catch (e) {
       return '--:--';
     }
-  }
-
-  String _formatDate(String? dateTimeString) {
-    if (dateTimeString == null) return '';
-    try {
-      final dateTime = DateTime.parse(dateTimeString);
-      final days = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
-      return days[dateTime.weekday % 7];
-    } catch (e) {
-      return '';
-    }
-  }
-
-  String _getWeatherIcon(double? temp, double? humidity, double? rainChance) {
-    if (temp == null) return '☁️';
-    if (rainChance != null && rainChance > 70) return '⛈️';
-    if (rainChance != null && rainChance > 30) return '🌧️';
-    if (temp > 30) return '☀️';
-    if (temp < 20) return '❄️';
-    return '⛅';
-  }
-
-  IconData _getWeatherIconData(
-    double? temp,
-    double? humidity,
-    double? rainChance,
-  ) {
-    if (temp == null) return Icons.wb_cloudy;
-    if (rainChance != null && rainChance > 70) return Icons.thunderstorm;
-    if (rainChance != null && rainChance > 30) return Icons.grain;
-    if (temp > 30) return Icons.wb_sunny;
-    if (temp < 20) return Icons.ac_unit;
-    return Icons.wb_cloudy;
   }
 
   @override

@@ -23,7 +23,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
     setState(() => _isLoading = true);
     try {
       final response = await http.get(
-        Uri.parse('https://myporto.site/api/search?query=$cityName'),
+        Uri.parse('http://10.0.2.2:8000/search?query=$cityName'),
       );
 
       if (response.statusCode == 200) {
@@ -113,133 +113,138 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 16),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                              ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          height:
+                              280, // ✅ Tinggi box utama (ubah sesuai kebutuhan)
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.2),
                             ),
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceAround,
-                                  children: List.generate(
-                                    weatherData!['forecast'].length,
-                                    (index) {
-                                      final weather =
-                                          weatherData!['forecast'][index];
-                                      return Column(
-                                        children: [
-                                          Text(
-                                            weather['label']
-                                                .toString()
-                                                .toUpperCase(),
-                                            style: TextStyle(
-                                              fontFamily: 'Montserrat',
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(
-                                                0xFFFFFDF3,
-                                              ).withOpacity(
-                                                index == 1 ? 0.9 : 0.5,
-                                              ),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 20,
+                          ),
+                          child: Column(
+                            // mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceAround,
+                                children: List.generate(
+                                  weatherData!['forecast'].length,
+                                  (index) {
+                                    final weather =
+                                        weatherData!['forecast'][index];
+                                    return Column(
+                                      children: [
+                                        Text(
+                                          weather['label']
+                                              .toString()
+                                              .toUpperCase(),
+                                          style: TextStyle(
+                                            fontFamily: 'Montserrat',
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(
+                                              0xFFFFFDF3,
+                                            ).withOpacity(
+                                              index == 1 ? 0.9 : 0.5,
                                             ),
                                           ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            weather['tanggal'],
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontFamily: 'Poppins',
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Icon(
-                                            getWeatherIcon(weather['ikon']),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          weather['tanggal'],
+                                          style: const TextStyle(
                                             color: Colors.white,
+                                            fontFamily: 'Poppins',
                                           ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            "${weather['suhu']}°",
-                                            style: GoogleFonts.poppins(
-                                              fontWeight:
-                                                  FontWeight.w300, // Light
-                                              color: const Color(0xFFFFFDF3),
-                                              fontSize:
-                                                  16, // Sesuaikan jika perlu
-                                            ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Icon(
+                                          getWeatherIcon(weather['ikon']),
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          "${weather['suhu']}°",
+                                          style: GoogleFonts.poppins(
+                                            fontWeight:
+                                                FontWeight.w300, // Light
+                                            color: const Color(0xFFFFFDF3),
+                                            fontSize:
+                                                16, // Sesuaikan jika perlu
                                           ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  height: 100,
-                                  child: LineChart(
-                                    LineChartData(
-                                      titlesData: FlTitlesData(show: false),
-                                      gridData: FlGridData(show: false),
-                                      borderData: FlBorderData(show: false),
-                                      lineBarsData: [
-                                        LineChartBarData(
-                                          isCurved: true,
-                                          gradient: LinearGradient(
-                                            colors: [
-                                              Colors.white,
-                                              Colors.white70,
-                                            ],
-                                          ),
-                                          barWidth: 2,
-                                          spots: List.generate(
-                                            suhuList.length,
-                                            (index) => FlSpot(
-                                              index.toDouble(),
-                                              suhuList[index],
-                                            ),
-                                          ),
-                                          dotData: FlDotData(show: false),
                                         ),
                                       ],
-                                    ),
+                                    );
+                                  },
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 100,
+                                child: LineChart(
+                                  LineChartData(
+                                    titlesData: FlTitlesData(show: false),
+                                    gridData: FlGridData(show: false),
+                                    borderData: FlBorderData(show: false),
+                                    lineBarsData: [
+                                      LineChartBarData(
+                                        isCurved: true,
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Colors.white,
+                                            Colors.white70,
+                                          ],
+                                        ),
+                                        barWidth: 2,
+                                        spots: List.generate(
+                                          suhuList.length,
+                                          (index) => FlSpot(
+                                            index.toDouble(),
+                                            suhuList[index],
+                                          ),
+                                        ),
+                                        dotData: FlDotData(show: false),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 20),
-                                isFavorite
-                                    ? WeatherActionButton(
-                                      icon: Icons.arrow_forward,
-                                      label: "Lihat ke halaman awal",
-                                      onPressed: () {
-                                        Navigator.pushNamedAndRemoveUntil(
-                                          context,
-                                          '/',
-                                          (route) => false,
-                                        );
-                                      },
-                                    )
-                                    : WeatherActionButton(
-                                      icon: Icons.add,
-                                      label: "Tambahkan ke favorit",
-                                      onPressed: () {
-                                        if (city != null) toggleFavorite(city);
-                                      },
-                                    ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 80),
+                    isFavorite
+                        ? WeatherActionButton(
+                          icon: Icons.arrow_back,
+                          label: "Lihat ke halaman awal",
+                          onPressed: () {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/',
+                              (route) => false,
+                            );
+                          },
+                        )
+                        : WeatherActionButton(
+                          icon: Icons.add,
+                          label: "Tambah ke halaman awal",
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
                   ],
                 ),
               ),
