@@ -23,6 +23,7 @@ class WeatherModel {
         position.latitude,
         position.longitude,
       );
+
       weatherData.value = Map<String, dynamic>.from(rawResult);
     } catch (e) {
       debugPrint('Gagal memuat data cuaca: $e');
@@ -30,10 +31,14 @@ class WeatherModel {
       isLoading.value = false;
     }
   }
-
+  
   // Deskripsi kondisi cuaca berdasarkan nilai suhu, kelembapan, dan peluang hujan
   static String getWeatherDescription(Map<String, dynamic> weather) {
-    final weatherDetail = weather['weather'] ?? {};
+    final weatherDetailRaw = weather['weather'];
+    final weatherDetail =
+        (weatherDetailRaw is Map)
+            ? Map<String, dynamic>.from(weatherDetailRaw)
+            : <String, dynamic>{};
     final temp = weatherDetail['suhu'] ?? 0;
     final humidity = weatherDetail['kelembapan'] ?? 0;
     final rainChance = weatherDetail['peluang_hujan'] ?? 0;

@@ -16,15 +16,18 @@ class WeatherActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ElevatedButton.icon(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white10,
-            shape: const CircleBorder(),
-            padding: const EdgeInsets.all(16),
+        Ink(
+          decoration: const ShapeDecoration(
+            color: Color(0x0051576D),
+            shape: CircleBorder(),
           ),
-          icon: Icon(icon, color: Colors.white),
-          label: const Text(""), // kosong karena hanya pakai ikon
+          child: IconButton(
+            icon: Icon(icon, color: Colors.white),
+            onPressed: onPressed,
+            iconSize: 28,
+            padding: const EdgeInsets.all(20), // bikin lebih besar dan simetris
+            // splashRadius: 30,
+          ),
         ),
         const SizedBox(height: 8),
         Text(label, style: const TextStyle(color: Colors.white)),

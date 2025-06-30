@@ -72,7 +72,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
     try {
       final encodedCity = Uri.encodeComponent(city);
       final response = await http.get(
-        Uri.parse('https://myporto.site/api/suggestions?query=$encodedCity'),
+        Uri.parse('http://10.0.2.2:8000/suggestions?query=$encodedCity'),
       );
 
       if (response.statusCode == 200) {
@@ -146,8 +146,8 @@ class _SearchCityPageState extends State<SearchCityPage> {
           onPressed: () => _addToFavorites(city, region), // ✅ penting!
         ),
         onTap: () async {
-          await saveSearchHistory(region);
-          Navigator.pushNamed(context, '/city-weather', arguments: region);
+          await saveSearchHistory(city);
+          Navigator.pushNamed(context, '/city-weather', arguments: city);
         },
       ),
     );
