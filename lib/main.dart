@@ -5,6 +5,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_cuaca/route.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> mintaIzinNotifikasi() async {
   if (await Permission.notification.isDenied) {
@@ -14,6 +15,7 @@ Future<void> mintaIzinNotifikasi() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
 
   await Future.wait([
     initializeDateFormatting('id_ID', null),
@@ -25,7 +27,6 @@ Future<void> main() async {
 
   runApp(const MyApp());
 }
-
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -89,14 +90,8 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {
-        '/city-weather': (context) => CityWeatherPreviewPage(),
-      },
-      home: WeatherHomePage(
-        onToggleTheme: toggleTheme,
-        isDarkMode: isDarkMode,
-      ),
+      routes: {'/city-weather': (context) => CityWeatherPreviewPage()},
+      home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }
 }
-

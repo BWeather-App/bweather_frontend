@@ -6,6 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive/hive.dart';
 import './widgets/weather_action_button.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class CityWeatherPreviewPage extends StatefulWidget {
   const CityWeatherPreviewPage({super.key});
@@ -21,10 +22,13 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
 
   Future<void> fetchWeather(String cityName) async {
     setState(() => _isLoading = true);
+
     try {
-      final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/search?query=$cityName'),
-      );
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+      final encodedCity = Uri.encodeComponent(cityName);
+      final url = Uri.parse('$baseUrl/api/search?query=$encodedCity');
+
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         setState(() {

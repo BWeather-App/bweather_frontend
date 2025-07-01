@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class WeatherService {
-  final String _baseUrl = 'http://10.0.2.2:8000';
+  String get _baseUrl =>
+      dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
 
   /// Memanggil data cuaca berdasarkan satu nama kota (simple)
   Future<Map<String, dynamic>> getWeatherByCity(String city) async {
-    final url = Uri.parse('$_baseUrl/search?query=$city');
+    final url = Uri.parse('$_baseUrl/api/search?query=$city');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {
@@ -27,7 +29,7 @@ class WeatherService {
     double lat,
     double lon,
   ) async {
-    final url = Uri.parse('$_baseUrl/weather?lat=$lat&lon=$lon');
+    final url = Uri.parse('$_baseUrl/api/weather?lat=$lat&lon=$lon');
     print('Memanggil $url');
 
     final response = await http.get(url);
@@ -47,7 +49,7 @@ class WeatherService {
 
   /// Mengambil saran lokasi berdasarkan query
   Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
-    final url = Uri.parse('$_baseUrl/suggestions?query=$query');
+    final url = Uri.parse('$_baseUrl/api/suggestions?query=$query');
     final response = await http.get(url);
 
     if (response.statusCode != 200) {

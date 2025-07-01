@@ -172,9 +172,14 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                               isMain
                                   ? weatherData
                                   : _favoriteWeathers[index - 1];
-                          final weather = Map<String, dynamic>.from(
-                            data?['weather'] ?? {},
-                          );
+                          final weatherRoot = data?['weather'];
+                          final weather =
+                              (weatherRoot is Map &&
+                                      weatherRoot['cuaca_saat_ini'] is Map)
+                                  ? Map<String, dynamic>.from(
+                                    weatherRoot['cuaca_saat_ini'],
+                                  )
+                                  : <String, dynamic>{};
 
                           if (data == null) {
                             return const Center(
@@ -186,9 +191,12 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                           final mainCondition = weather['cuaca'];
                           // final current = data['current'];
                           // final forecastList = data['forecast'];
-                          final current = Map<String, dynamic>.from(
-                            data['current'] ?? {},
-                          );
+                          final currentRaw = data['current'];
+                          final current =
+                              (currentRaw is Map)
+                                  ? Map<String, dynamic>.from(currentRaw)
+                                  : <String, dynamic>{};
+
                           final forecastList = List<Map<String, dynamic>>.from(
                             data['forecast'] ?? [],
                           );
@@ -217,7 +225,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          "${(weather['suhu'] ?? 0).round()}",
+                                          "${(weather['suhu'] is num ? weather['suhu'] : 0).round()}",
                                           style: TextStyle(
                                             color: textColor,
                                             fontSize: 80,

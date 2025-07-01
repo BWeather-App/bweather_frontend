@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:ui';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -70,9 +70,10 @@ class _SearchCityPageState extends State<SearchCityPage> {
     await _loadSearchHistory();
 
     try {
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
       final encodedCity = Uri.encodeComponent(city);
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/suggestions?query=$encodedCity'),
+        Uri.parse('$baseUrl/api/suggestions?query=$encodedCity'),
       );
 
       if (response.statusCode == 200) {
@@ -81,7 +82,9 @@ class _SearchCityPageState extends State<SearchCityPage> {
           _suggestions = data;
         });
       }
-    } catch (_) {}
+    } catch (_) {
+      // Tambahkan log atau handling jika perlu
+    }
 
     setState(() {
       _isLoading = false;
