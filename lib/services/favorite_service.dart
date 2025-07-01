@@ -1,6 +1,6 @@
 // favorite_service.dart
 import 'dart:convert';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 
@@ -41,18 +41,20 @@ class FavoriteService {
 
   Future<List<Map<String, dynamic>>> loadFavoriteWeather() async {
     final favorites = getFavorites();
+    final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+
     List<Map<String, dynamic>> result = [];
     for (var city in favorites) {
-      final response = await http.get(
-        Uri.parse(
-          'http://10.0.2.2:8000/search?query=${Uri.encodeComponent(city['full'] ?? city['name'] ?? '')}',
-        ),
-      );
+      final fullName = Uri.encodeComponent(city['full'] ?? city['name'] ?? '');
+      final url = Uri.parse('$baseUrl/api/search?query=$fullName');
+
+      final response = await http.get(url);
       if (response.statusCode == 200) {
         final weatherData = jsonDecode(response.body);
         result.add({'city': city, 'weather': weatherData});
       }
     }
+
     return result;
   }
 }
