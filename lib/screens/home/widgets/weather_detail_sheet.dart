@@ -8,6 +8,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math' as math;
+// import 'package:hive/hive.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class WeatherDetailSheet extends StatefulWidget {
   final ScrollController scrollController;
@@ -61,8 +63,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
       double lat = position.latitude;
       double lon = position.longitude;
 
-      final url = 'http://10.0.2.2:8000/weather?lat=$lat&lon=$lon';
-
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+      final url = '$baseUrl/api/weather?lat=$lat&lon=$lon';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -84,6 +86,73 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
       });
     }
   }
+
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _fetchWeatherData();
+  // }
+
+  // List<Map<String, dynamic>> favoriteWeathers = [];
+
+  // Future<void> _fetchWeatherData() async {
+  //   setState(() => isLoading = true);
+
+  //   try {
+  //     // Ambil lokasi saat ini
+  //     Position position = await Geolocator.getCurrentPosition(
+  //       desiredAccuracy: LocationAccuracy.high,
+  //     );
+
+  //     double lat = position.latitude;
+  //     double lon = position.longitude;
+
+  //     final url = 'http://127.0.0.1:8000/weather?lat=$lat&lon=$lon';
+  //     final response = await http.get(Uri.parse(url));
+
+  //     if (response.statusCode == 200) {
+  //       final data = json.decode(response.body);
+
+  //       // Setelah berhasil ambil data utama, cek Hive
+  //       final box =
+  //           Hive.isBoxOpen('weatherBox')
+  //               ? Hive.box('weatherBox')
+  //               : await Hive.openBox('weatherBox');
+
+  //       final saved = box.get('favorites', defaultValue: []);
+  //       List<Map<String, String>> favoriteCities = [];
+
+  //       if (saved is List) {
+  //         favoriteCities = List<Map<String, String>>.from(
+  //           saved.map((e) => Map<String, String>.from(e)),
+  //         );
+  //       }
+
+  //       List<Map<String, dynamic>> favoriteWeather = [];
+
+  //       if (favoriteCities.isNotEmpty) {
+  //         final service = FavoriteService();
+  //         favoriteWeather = await service.loadFavoriteWeather();
+  //       }
+
+  //       setState(() {
+  //         weatherData = data;
+  //         favoriteWeathers = favoriteWeather;
+  //         isLoading = false;
+  //       });
+  //     } else {
+  //       setState(() {
+  //         error = 'Failed to load weather data';
+  //         isLoading = false;
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error = 'Network error: $e';
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
 
   String _formatTime(String? dateTimeString) {
     if (dateTimeString == null) return '--:--';
@@ -565,7 +634,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
             ],
           ),
           const SizedBox(height: 8),
-          Expanded(
+          SizedBox(
+            height: 60,
             child: CustomPaint(
               painter: SunPathPainter(),
               size: const Size(double.infinity, 60),

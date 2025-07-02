@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
-import 'package:hive/hive.dart';
+// import 'package:hive/hive.dart';
 import 'package:flutter_cuaca/route.dart';
 
 class SearchCityPage extends StatefulWidget {
@@ -22,34 +22,24 @@ class _SearchCityPageState extends State<SearchCityPage> {
   bool _selectMode = false;
   Set<String> _selectedHistory = {};
 
-  late Box _weatherBox;
   List<Map<String, String>> _favoriteCities = [];
 
   @override
   void initState() {
     super.initState();
     _loadSearchHistory();
-    _initHive();
+    _initFavorites();
   }
 
-  Future<void> _initHive() async {
-    _weatherBox = Hive.box('weatherBox');
-    final saved = _weatherBox.get('favorites', defaultValue: []);
+  Future<void> _initFavorites() async {
     setState(() {
-      _favoriteCities = List<Map<String, String>>.from(
-        (saved as List).map((e) => Map<String, String>.from(e)),
-      );
+      _favoriteCities = FavoriteService.getFavorites();
     });
   }
 
-  void _addToFavorites(String city, String region) {
-    final exists = _favoriteCities.any((item) => item['full'] == region);
-    if (!exists) {
-      setState(() {
-        _favoriteCities.add({'name': city, 'full': region});
-        _weatherBox.put('favorites', _favoriteCities);
-      });
-    }
+  Future<void> _addToFavorites(String city, String region) async {
+    await FavoriteService.addFavorite(city, region);
+    _initFavorites(); // refresh ulang
   }
 
   Future<void> _loadSearchHistory() async {
@@ -70,7 +60,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
     await _loadSearchHistory();
 
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
       final encodedCity = Uri.encodeComponent(city);
       final response = await http.get(
         Uri.parse('$baseUrl/api/suggestions?query=$encodedCity'),
@@ -117,7 +107,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
     Color cardColor,
     Color iconColor,
   ) {
-    final alreadyFavorite = _favoriteCities.any((c) => c['full'] == region);
+    final alreadyFavorite = FavoriteService.isFavorite(region);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -141,13 +131,44 @@ class _SearchCityPageState extends State<SearchCityPage> {
             fontSize: 12,
           ),
         ),
+        // trailing: IconButton(
+        //   icon: Icon(
+        //     alreadyFavorite ? Icons.check : Icons.add,
+        //     color: alreadyFavorite ? Colors.greenAccent : iconColor,
+        //   ),
+        //   onPressed: () => _addToFavorites(city, region), // ✅ penting!
+        // ),
         trailing: IconButton(
           icon: Icon(
             alreadyFavorite ? Icons.check : Icons.add,
             color: alreadyFavorite ? Colors.greenAccent : iconColor,
           ),
-          onPressed: () => _addToFavorites(city, region), // ✅ penting!
+          onPressed: () async {
+            await _addToFavorites(city, region);
+          },
         ),
+        // trailing: Row(
+        //   mainAxisSize: MainAxisSize.min,
+        //   children: [
+        //     IconButton(
+        //       icon: Icon(
+        //         alreadyFavorite ? Icons.check : Icons.add,
+        //         color: alreadyFavorite ? Colors.greenAccent : iconColor,
+        //       ),
+        //       onPressed: () async {
+        //         await _addToFavorites(city, region);
+        //       },
+        //     ),
+        //     if (alreadyFavorite)
+        //       IconButton(
+        //         icon: const Icon(Icons.delete, color: Colors.redAccent),
+        //         onPressed: () async {
+        //           await FavoriteService.removeFavorite(region);
+        //           _initFavorites();
+        //         },
+        //       ),
+        //   ],
+        // ),
         onTap: () async {
           await saveSearchHistory(city);
           Navigator.pushNamed(context, '/city-weather', arguments: city);

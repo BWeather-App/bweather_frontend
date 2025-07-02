@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive/hive.dart';
+// import 'package:hive/hive.dart';
 import './widgets/weather_action_button.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_cuaca/route.dart';
 
 class CityWeatherPreviewPage extends StatefulWidget {
   const CityWeatherPreviewPage({super.key});
@@ -19,12 +20,24 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
   Map<String, dynamic>? weatherData;
   bool _isLoading = false;
   bool isFavorite = false;
+  String? currentCity;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final city = ModalRoute.of(context)?.settings.arguments as String?;
+    if (city != null && city != currentCity) {
+      currentCity = city;
+      fetchWeather(city);
+      checkIfFavorite(city);
+    }
+  }
 
   Future<void> fetchWeather(String cityName) async {
     setState(() => _isLoading = true);
 
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
       final encodedCity = Uri.encodeComponent(cityName);
       final url = Uri.parse('$baseUrl/api/search?query=$encodedCity');
 
@@ -48,39 +61,38 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
     }
   }
 
-  Future<void> toggleFavorite(String cityName) async {
-    final box = Hive.box('weatherBox');
-    List<String> favorites =
-        box.get('favoriteCities', defaultValue: []).cast<String>();
-
-    if (favorites.contains(cityName)) {
-      favorites.remove(cityName);
-      isFavorite = false;
-    } else {
-      favorites.add(cityName);
-      isFavorite = true;
-    }
-
-    await box.put('favoriteCities', favorites);
-    setState(() {});
+  Future<void> checkIfFavorite(String fullName) async {
+    final result = await FavoriteService.isFavorite(fullName);
+    setState(() => isFavorite = result);
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final city = ModalRoute.of(context)?.settings.arguments as String?;
-    if (city != null) {
-      fetchWeather(city);
-      final box = Hive.box('weatherBox');
-      final favorites =
-          box.get('favoriteCities', defaultValue: []).cast<String>();
-      isFavorite = favorites.contains(city);
+  Future<void> addToFavorite(String name, String full) async {
+    await FavoriteService.addFavorite(name, full);
+    setState(() => isFavorite = true);
+  }
+
+  Future<void> removeFromFavorite(String full) async {
+    await FavoriteService.removeFavorite(full);
+    setState(() => isFavorite = false);
+  }
+
+  IconData getWeatherIcon(String condition) {
+    switch (condition.toLowerCase()) {
+      case 'rainy':
+        return Icons.beach_access;
+      case 'sunny':
+        return Icons.wb_sunny;
+      case 'cloudy':
+        return Icons.cloud;
+      case 'partly cloudy':
+        return Icons.cloud_queue;
+      default:
+        return Icons.wb_cloudy;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final city = ModalRoute.of(context)?.settings.arguments as String?;
     final List<double> suhuList =
         weatherData != null
             ? weatherData!['forecast']
@@ -93,7 +105,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         title: Text(
-          city ?? "",
+          currentCity ?? "",
           style: GoogleFonts.poppins(color: Colors.white, fontSize: 20),
         ),
         foregroundColor: Colors.white,
@@ -122,8 +134,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
-                          height:
-                              280, // ✅ Tinggi box utama (ubah sesuai kebutuhan)
+                          height: 280,
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.1),
@@ -137,7 +148,6 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                             vertical: 20,
                           ),
                           child: Column(
-                            // mainAxisAlignment: MainAxisAlignment.spaceAround,
                             mainAxisAlignment: MainAxisAlignment.start,
                             children: [
                               Row(
@@ -181,11 +191,9 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                                         Text(
                                           "${weather['suhu']}°",
                                           style: GoogleFonts.poppins(
-                                            fontWeight:
-                                                FontWeight.w300, // Light
+                                            fontWeight: FontWeight.w300,
                                             color: const Color(0xFFFFFDF3),
-                                            fontSize:
-                                                16, // Sesuaikan jika perlu
+                                            fontSize: 16,
                                           ),
                                         ),
                                       ],
@@ -245,28 +253,15 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                         : WeatherActionButton(
                           icon: Icons.add,
                           label: "Tambah ke halaman awal",
-                          onPressed: () {
-                            Navigator.pop(context);
+                          onPressed: () async {
+                            if (currentCity != null) {
+                              await addToFavorite(currentCity!, currentCity!);
+                            }
                           },
                         ),
                   ],
                 ),
               ),
     );
-  }
-
-  IconData getWeatherIcon(String condition) {
-    switch (condition.toLowerCase()) {
-      case 'rainy':
-        return Icons.beach_access;
-      case 'sunny':
-        return Icons.wb_sunny;
-      case 'cloudy':
-        return Icons.cloud;
-      case 'partly cloudy':
-        return Icons.cloud_queue;
-      default:
-        return Icons.wb_cloudy;
-    }
   }
 }
