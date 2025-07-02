@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_cuaca/route.dart';
 // import 'dart:ui';
+import 'package:hive/hive.dart';
 
 class WeatherHomePage extends StatefulWidget {
   final VoidCallback onToggleTheme;
@@ -18,8 +19,7 @@ class WeatherHomePage extends StatefulWidget {
 }
 
 class _WeatherHomePageState extends State<WeatherHomePage> {
-  List<Map<String, dynamic>> favoriteWeatherList = []; //Bersifat Public
-  // List<Map<String, dynamic>> _favoriteWeatherList = []; //Bersifat Private
+  List<Map<String, dynamic>> favoriteWeatherList = []; // Bersifat public
   bool isFavoriteLoading = true;
 
   @override
@@ -27,37 +27,26 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     super.initState();
     WeatherModel.loadWeatherData(context);
 
-    // ⏳ Delay eksekusi sampai UI frame pertama selesai
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      loadDataFavoriteForPageView(); // muat data favorit setelah UI siap
+      loadFavoriteDataOnce(); // hanya sekali load
     });
   }
 
-  Future<void> loadDataFavoriteForPageView() async {
+  Future<void> loadFavoriteDataOnce() async {
+    setState(() => isFavoriteLoading = true);
+
     try {
       final data = await FavoriteService.getFavoriteWeatherData();
       setState(() {
-        favoriteWeatherList = data.length > 3 ? data.sublist(0, 3) : data;
+        favoriteWeatherList =
+            data; // Simpan semua (maks 3 sudah dibatasi di service)
       });
     } catch (e) {
-      debugPrint("Gagal load data favorite untuk PageView: $e");
+      debugPrint("Gagal memuat data favorit: $e");
+    } finally {
+      setState(() => isFavoriteLoading = false);
     }
   }
-
-  // Jika yang baru tidak bisa
-  // Future<void> loadDataFavorite() async {
-  //   setState(() => isFavoriteLoading = true);
-  //   try {
-  //     final data = await FavoriteService.getFavoriteWeatherData();
-  //     setState(() {
-  //       favoriteWeatherList = data;
-  //     });
-  //   } catch (e) {
-  //     // Optional: Tambahkan error handling/log
-  //   } finally {
-  //     setState(() => isFavoriteLoading = false);
-  //   }
-  // }
 
   String formatTimeFromString(String? t) {
     if (t == null) return '-';
@@ -73,8 +62,8 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   @override
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
-    final textColor = isLight ? const Color(0xFF232B3E) : Colors.white;
-    final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
+    // final textColor = isLight ? const Color(0xFF232B3E) : Colors.white;
+    // final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -167,9 +156,19 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                       child: PageView.builder(
                         itemCount:
                             1 +
-                            favoriteWeatherList
-                                .length, // 1 untuk lokasi saat ini + favorit
+                            favoriteWeatherList.length.clamp(
+                              0,
+                              3,
+                            ), // 1 = lokasi saat ini
                         itemBuilder: (context, index) {
+                          final isLight =
+                              Theme.of(context).brightness == Brightness.light;
+                          final textColor =
+                              isLight ? const Color(0xFF232B3E) : Colors.white;
+                          final cardColor =
+                              isLight
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.05);
                           if (index == 0) {
                             return Stack(
                               children: [
@@ -301,8 +300,40 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                             );
                           } else {
                             final cityWeather = favoriteWeatherList[index - 1];
-                            return buildFavoriteWeatherView(cityWeather);
+                            // 🐞 Debug cepat di sini
+                            debugPrint('======= DEBUG FAVORITE CITY =======');
+                            debugPrint(
+                              'rawCityWeather runtimeType: ${cityWeather.runtimeType}',
+                            );
+                            debugPrint(
+                              'weather type: ${cityWeather['weather']?.runtimeType}',
+                            );
+                            debugPrint('full data: $cityWeather');
+                            
+                            final weather = cityWeather['weather'];
+                            if (weather == null ||
+                                weather is! Map<String, dynamic>) {
+                              return Center(
+                                child: Text(
+                                  "Cuaca tidak tersedia",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              );
+                            }
+
+                            buildFavoriteWeatherView(
+                              cityWeather,
+                              isLight: isLight,
+                              textColor: textColor,
+                              cardColor: cardColor,
+                              formatTimeFromTimestamp: formatTimeFromTimestamp,
+                            );
                           }
+
+                          //else {
+                          //   final cityWeather = favoriteWeatherList[index - 1];
+                          //   return buildFavoriteWeatherView(cityWeather);
+                          // }
                         },
                       ),
                     ),
@@ -317,23 +348,122 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   }
 }
 
-Widget buildFavoriteWeatherView(Map<String, dynamic> cityWeather) {
-  return Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          cityWeather['location'] ?? 'Tidak diketahui',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+Widget buildFavoriteWeatherView(
+  Map<String, dynamic> cityWeather, {
+  required bool isLight,
+  required Color textColor,
+  required Color cardColor,
+  required String Function(int) formatTimeFromTimestamp,
+}) {
+  final current = cityWeather['current'] ?? {}; // Gunakan langsung current
+  final forecastList = cityWeather['forecast'] ?? [];
+  final mainCondition = current['cuaca'];
+  final lat = current['lat'];
+  final lon = current['lon'];
+
+  return Stack(
+    children: [
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (mainCondition != null) ...[
+              Image.asset(
+                WeatherModel.getIconAsset(mainCondition, !isLight),
+                width: 80,
+                height: 70,
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${(current['suhu'] ?? 0).round()}",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 80,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    "°C",
+                    style: TextStyle(color: textColor, fontSize: 22),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              WeatherModel.getWeatherDescription(current),
+              style: TextStyle(color: textColor, fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.air, color: textColor, size: 24),
+                const SizedBox(width: 8),
+                Text("Angin", style: TextStyle(color: textColor)),
+                const SizedBox(width: 8),
+                Text(
+                  "${current['kecepatan_angin'] ?? '-'} m/s",
+                  style: TextStyle(color: textColor),
+                ),
+              ],
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
-        Text(
-          '${cityWeather['temperature']}°C',
-          style: const TextStyle(fontSize: 48),
-        ),
-        // ...tambahkan forecast dan info lain
-      ],
-    ),
+      ),
+
+      // Detail Cuaca (bawah)
+      DraggableScrollableSheet(
+        initialChildSize: 0.25,
+        minChildSize: 0.25,
+        maxChildSize: 1.0,
+        builder: (context, scrollController) {
+          return WeatherDetailSheet(
+            scrollController: scrollController,
+            forecastList: forecastList,
+            current: current,
+            isLight: isLight,
+            cardColor: cardColor,
+            getWeatherDescription: WeatherModel.getWeatherDescription,
+            formatTime: formatTimeFromTimestamp,
+            getIconAsset:
+                (condition, isDark) =>
+                    WeatherModel.getIconAsset(condition, isDark),
+            lat: lat,
+            lon: lon,
+          );
+        },
+      ),
+    ],
   );
 }
+
+// Favorite Kota lama
+// Widget buildFavoriteWeatherView(Map<String, dynamic> cityWeather) {
+//   return Padding(
+//     padding: const EdgeInsets.all(16),
+//     child: Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Text(
+//           cityWeather['location'] ?? 'Tidak diketahui',
+//           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+//         ),
+//         const SizedBox(height: 10),
+//         Text(
+//           '${cityWeather['temperature']}°C',
+//           style: const TextStyle(fontSize: 48),
+//         ),
+//         // ...tambahkan forecast dan info lain
+//       ],
+//     ),
+//   );
+// }
