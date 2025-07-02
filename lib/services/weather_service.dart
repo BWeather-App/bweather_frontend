@@ -68,4 +68,22 @@ class WeatherService {
         )
         .toList();
   }
+
+  static Future<Map<String, dynamic>?> getWeatherByCityFull(
+    String fullName,
+  ) async {
+    try {
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
+      final encoded = Uri.encodeComponent(fullName);
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/search?query=$encoded'),
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (_) {}
+
+    return null;
+  }
 }

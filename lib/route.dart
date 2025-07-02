@@ -2,7 +2,6 @@
 export 'screens/home/weather_home.dart';
 
 export 'screens/home/widgets/weather_header.dart';
-export 'screens/home/widgets/weekly_forecast.dart';
 export 'screens/home/widgets/weather_detail_sheet.dart';
 
 export 'screens/home/widgets/komponen/sun_path.dart' hide SunPathPainter;

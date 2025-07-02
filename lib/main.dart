@@ -24,6 +24,7 @@ Future<void> main() async {
 
   Intl.defaultLocale = 'id_ID';
   await Hive.openBox('weatherBox');
+  await FavoriteService.init(); // inisialisasi service
 
   runApp(const MyApp());
 }

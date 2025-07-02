@@ -20,47 +20,6 @@ class WeatherHeader extends StatelessWidget {
     final textColor = iconColor;
     final Color subTextColor = isLight ? Colors.black54 : Colors.white54;
 
-    // return Padding(
-    //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    //   child: Column(
-    //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    //     crossAxisAlignment: CrossAxisAlignment.center,
-    //     children: [
-    //       Row(
-    //         children: [
-    //           IconButton(
-    //             icon: Icon(Icons.add, color: iconColor),
-    //             onPressed: onAddCity,
-    //           ),
-    //           Text(
-    //             location?['name'] ?? "Memuat lokasi...",
-    //             style: TextStyle(
-    //               color: textColor,
-    //               fontWeight: FontWeight.bold,
-    //               fontSize: 16,
-    //             ),
-    //           ),
-    //           const SizedBox(height: 2),
-    //           Text(
-    //             location?['country'] ?? "",
-    //             style: TextStyle(
-    //               color: subTextColor,
-    //               fontSize: 10,
-    //               letterSpacing: 2,
-    //             ),
-    //           ),
-    //           IconButton(
-    //             icon: Icon(
-    //               isLight ? Icons.dark_mode : Icons.light_mode,
-    //               color: iconColor,
-    //             ),
-    //             onPressed: onToggleTheme,
-    //           ),
-    //         ],
-    //       ),
-    //     ],
-    //   ),
-    // );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Stack(
@@ -80,8 +39,8 @@ class WeatherHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                location?['name'] != null && location?['region'] != null
-                    ? "${location?['name']}, ${location?['region']}"
+                location?['city'] != null && location?['region'] != null
+                    ? "${location?['city']}, ${location?['region']}"
                     : "Memuat lokasi...",
                 style: TextStyle(
                   color: textColor,
