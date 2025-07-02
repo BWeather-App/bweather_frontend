@@ -51,37 +51,37 @@ class FavoriteService {
           final data = await WeatherService.getWeatherByCityFull(fullName);
           if (data != null) weatherList.add(data);
         } catch (_) {
-          // optionally handle/log error
+          debugPrint("Kota favorit: ${city['lokasi']}, Suhu: ${city['suhu']}");
         }
       }
     }
     return weatherList;
   }
 
-  static Future<List<Map<String, dynamic>>> loadFavoriteWeather() async {
-    final box = Hive.box('weatherBox');
-    final List<dynamic> favorites = box.get('favorites', defaultValue: []);
-    List<Map<String, dynamic>> result = [];
+  // static Future<List<Map<String, dynamic>>> loadFavoriteWeather() async {
+  //   final box = Hive.box('weatherBox');
+  //   final List<dynamic> favorites = box.get('favorites', defaultValue: []);
+  //   List<Map<String, dynamic>> result = [];
 
-    for (var fav in favorites) {
-      if (fav is Map && fav.containsKey('full')) {
-        try {
-          final fullName = fav['full'];
-          final weatherData = await WeatherService.getWeatherByCityFull(
-            fullName,
-          );
+  //   for (var fav in favorites) {
+  //     if (fav is Map && fav.containsKey('full')) {
+  //       try {
+  //         final fullName = fav['full'];
+  //         final weatherData = await WeatherService.getWeatherByCityFull(
+  //           fullName,
+  //         );
 
-          if (weatherData != null) {
-            result.add(weatherData);
-          }
-        } catch (e) {
-          debugPrint('Gagal ambil cuaca untuk $fav: $e');
-        }
-      }
-    }
+  //         if (weatherData != null) {
+  //           result.add(weatherData);
+  //         }
+  //       } catch (e) {
+  //         debugPrint('Gagal ambil cuaca untuk $fav: $e');
+  //       }
+  //     }
+  //   }
 
-    return result;
-  }
+  //   return result;
+  // }
 
   static bool isFavorite(String fullName) {
     final favorites = getFavorites();
