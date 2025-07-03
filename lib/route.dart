@@ -3,7 +3,7 @@ export 'screens/home/weather_home.dart';
 
 export 'screens/home/widgets/weather_header.dart';
 export 'screens/home/widgets/weather_detail_sheet.dart';
-
+export 'screens/home/widgets/weather_favorite.dart';
 export 'screens/home/widgets/komponen/sun_path.dart' hide SunPathPainter;
 export 'screens/home/widgets/komponen/wind_direction.dart' hide CompassPainter;
 

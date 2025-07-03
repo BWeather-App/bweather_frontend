@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
+// import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter_cuaca/services/weather_service.dart';
 
 class FavoriteService {
   static late Box _box;
@@ -38,50 +37,6 @@ class FavoriteService {
         getFavorites()..removeWhere((item) => item['full'] == fullName);
     await _box.put('favorites', favorites);
   }
-
-  /// Ambil data cuaca dari max 3 kota favorit
-  static Future<List<Map<String, dynamic>>> getFavoriteWeatherData() async {
-    final favorites = getFavorites().take(3).toList();
-    List<Map<String, dynamic>> weatherList = [];
-
-    for (final city in favorites) {
-      final fullName = city['full'];
-      if (fullName != null) {
-        try {
-          final data = await WeatherService.getWeatherByCityFull(fullName);
-          if (data != null) weatherList.add(data);
-        } catch (_) {
-          debugPrint("Kota favorit: ${city['lokasi']}, Suhu: ${city['suhu']}");
-        }
-      }
-    }
-    return weatherList;
-  }
-
-  // static Future<List<Map<String, dynamic>>> loadFavoriteWeather() async {
-  //   final box = Hive.box('weatherBox');
-  //   final List<dynamic> favorites = box.get('favorites', defaultValue: []);
-  //   List<Map<String, dynamic>> result = [];
-
-  //   for (var fav in favorites) {
-  //     if (fav is Map && fav.containsKey('full')) {
-  //       try {
-  //         final fullName = fav['full'];
-  //         final weatherData = await WeatherService.getWeatherByCityFull(
-  //           fullName,
-  //         );
-
-  //         if (weatherData != null) {
-  //           result.add(weatherData);
-  //         }
-  //       } catch (e) {
-  //         debugPrint('Gagal ambil cuaca untuk $fav: $e');
-  //       }
-  //     }
-  //   }
-
-  //   return result;
-  // }
 
   static bool isFavorite(String fullName) {
     final favorites = getFavorites();
