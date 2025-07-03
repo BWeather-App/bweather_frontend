@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:hive/hive.dart';
 import './widgets/weather_action_button.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_cuaca/route.dart';
@@ -62,13 +61,59 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
   }
 
   Future<void> checkIfFavorite(String fullName) async {
+    // Pastikan FavoriteService sudah diinisialisasi
+    await FavoriteService.init();
     final result = await FavoriteService.isFavorite(fullName);
     setState(() => isFavorite = result);
   }
 
-  Future<void> addToFavorite(String name, String full) async {
-    await FavoriteService.addFavorite(name, full);
-    setState(() => isFavorite = true);
+  Future<void> addToFavorite() async {
+    if (weatherData != null && currentCity != null) {
+      // Ambil data lat/lon dari API suggestions untuk mendapatkan koordinat yang tepat
+      try {
+        final baseUrl =
+            dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
+        final encodedCity = Uri.encodeComponent(currentCity!);
+        final suggestionsUrl = Uri.parse(
+          '$baseUrl/api/suggestions?query=$encodedCity',
+        );
+
+        final response = await http.get(suggestionsUrl);
+
+        if (response.statusCode == 200) {
+          final List<dynamic> suggestions = json.decode(response.body);
+
+          // Cari yang paling cocok dengan nama kota
+          final matchedCity = suggestions.firstWhere(
+            (item) => item['full'] == currentCity,
+            orElse: () => suggestions.isNotEmpty ? suggestions.first : null,
+          );
+
+          if (matchedCity != null) {
+            final cityData = {
+              'name': matchedCity['name'],
+              'full': matchedCity['full'],
+              'lat': matchedCity['lat'].toString(),
+              'lon': matchedCity['lon'].toString(),
+            };
+
+            await FavoriteService.addFavorite(cityData);
+            setState(() => isFavorite = true);
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("${matchedCity['name']} ditambahkan ke favorit"),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint("Error adding to favorite: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Gagal menambahkan ke favorit")),
+        );
+      }
+    }
   }
 
   Future<void> removeFromFavorite(String full) async {
@@ -253,11 +298,7 @@ class _CityWeatherPreviewPageState extends State<CityWeatherPreviewPage> {
                         : WeatherActionButton(
                           icon: Icons.add,
                           label: "Tambah ke halaman awal",
-                          onPressed: () async {
-                            if (currentCity != null) {
-                              await addToFavorite(currentCity!, currentCity!);
-                            }
-                          },
+                          onPressed: addToFavorite,
                         ),
                   ],
                 ),

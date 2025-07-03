@@ -15,7 +15,7 @@ class WeatherService {
       throw Exception('Gagal mengambil data dari kota');
     }
 
-    final data = json.decode(response.body);
+    final data = Map<String, dynamic>.from(json.decode(response.body));
 
     if (data['forecast'] == null || data['location'] == null) {
       throw Exception('Data cuaca tidak lengkap');
@@ -38,7 +38,7 @@ class WeatherService {
       throw Exception('Gagal mengambil data dari lokasi');
     }
 
-    final data = json.decode(response.body) as Map<String, dynamic>;
+    final data = Map<String, dynamic>.from(json.decode(response.body));
 
     if (data['weather'] == null || data['location'] == null) {
       throw Exception('Data cuaca tidak lengkap');
@@ -80,9 +80,29 @@ class WeatherService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        return Map<String, dynamic>.from(json.decode(response.body));
       }
     } catch (_) {}
+
+    return null;
+  }
+
+  static Future<Map<String, dynamic>?> getWeatherByLatLon({
+    required double lat,
+    required double lon,
+  }) async {
+    try {
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
+      final url = Uri.parse('$baseUrl/api/weather?lat=$lat&lon=$lon');
+      final response = await http.get(url);
+
+      if (response.statusCode == 200) {
+        final raw = json.decode(response.body);
+        return Map<String, dynamic>.from(raw); // <== INI PENTING
+      }
+    } catch (e) {
+      print("getWeatherByLatLon error: $e");
+    }
 
     return null;
   }
