@@ -26,7 +26,8 @@ Future<void> main() async {
   await Hive.openBox('weatherBox');
   await FavoriteService.init(); // inisialisasi service
 
-  runApp(const MyApp());
+  // runApp(const MyApp());
+  runApp(RestartWidget(child: const MyApp()));
 }
 
 class MyApp extends StatefulWidget {

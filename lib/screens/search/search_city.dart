@@ -22,7 +22,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
   bool _selectMode = false;
   Set<String> _selectedHistory = {};
 
-  List<Map<String, String>> _favoriteCities = [];
+  List<Map<String, dynamic>> _favoriteCities = [];
 
   @override
   void initState() {
@@ -31,15 +31,16 @@ class _SearchCityPageState extends State<SearchCityPage> {
     _initFavorites();
   }
 
-  Future<void> _initFavorites() async {
+  void _initFavorites() {
+    final result = FavoriteService.getFavorites(); // Tidak perlu await
     setState(() {
-      _favoriteCities = FavoriteService.getFavorites();
+      _favoriteCities = result;
     });
   }
 
-  Future<void> _addToFavorites(String city, String region) async {
-    await FavoriteService.addFavorite(city, region);
-    _initFavorites(); // refresh ulang
+  Future<void> _addToFavorites(Map<String, dynamic> cityData) async {
+    await FavoriteService.addFavorite(cityData);
+    _initFavorites();
   }
 
   Future<void> _loadSearchHistory() async {
@@ -67,7 +68,11 @@ class _SearchCityPageState extends State<SearchCityPage> {
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final raw = jsonDecode(response.body);
+        final data =
+            (raw as List)
+                .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+                .toList();
         setState(() {
           _suggestions = data;
         });
@@ -100,14 +105,18 @@ class _SearchCityPageState extends State<SearchCityPage> {
   }
 
   Widget _buildCityItem(
-    String city,
-    String region,
+    Map<String, dynamic> item,
     Color textColor,
     Color subtitleColor,
     Color cardColor,
     Color iconColor,
   ) {
-    final alreadyFavorite = FavoriteService.isFavorite(region);
+    final city = item['name'];
+    final region = item['full'] ?? item['name'];
+    final lat = item['lat'];
+    final lon = item['lon'];
+
+    final alreadyFavorite = _favoriteCities.any((fav) => fav['full'] == region);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -136,38 +145,15 @@ class _SearchCityPageState extends State<SearchCityPage> {
         //     alreadyFavorite ? Icons.check : Icons.add,
         //     color: alreadyFavorite ? Colors.greenAccent : iconColor,
         //   ),
-        //   onPressed: () => _addToFavorites(city, region), // ✅ penting!
-        // ),
-        trailing: IconButton(
-          icon: Icon(
-            alreadyFavorite ? Icons.check : Icons.add,
-            color: alreadyFavorite ? Colors.greenAccent : iconColor,
-          ),
-          onPressed: () async {
-            await _addToFavorites(city, region);
-          },
-        ),
-        // trailing: Row(
-        //   mainAxisSize: MainAxisSize.min,
-        //   children: [
-        //     IconButton(
-        //       icon: Icon(
-        //         alreadyFavorite ? Icons.check : Icons.add,
-        //         color: alreadyFavorite ? Colors.greenAccent : iconColor,
-        //       ),
-        //       onPressed: () async {
-        //         await _addToFavorites(city, region);
-        //       },
-        //     ),
-        //     if (alreadyFavorite)
-        //       IconButton(
-        //         icon: const Icon(Icons.delete, color: Colors.redAccent),
-        //         onPressed: () async {
-        //           await FavoriteService.removeFavorite(region);
-        //           _initFavorites();
-        //         },
-        //       ),
-        //   ],
+        //   onPressed: () async {
+        //     final cityData = {
+        //       'name': city,
+        //       'full': region,
+        //       'lat': lat,
+        //       'lon': lon,
+        //     };
+        //     await _addToFavorites(cityData);
+        //   },
         // ),
         onTap: () async {
           await saveSearchHistory(city);
@@ -267,8 +253,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
                         itemBuilder: (context, index) {
                           final item = _suggestions[index];
                           return _buildCityItem(
-                            item['name'],
-                            item['full'] ?? item['name'],
+                            item, // kirim seluruh item
                             textColor,
                             subtitleColor,
                             cardColor,

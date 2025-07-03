@@ -39,8 +39,8 @@ class WeatherHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                location?['nama'] != null && location?['region'] != null
-                    ? "${location?['nama']}, ${location?['region']}"
+                location?['city'] != null && location?['region'] != null
+                    ? "${location?['city']}, ${location?['region']}"
                     : "Memuat lokasi...",
                 style: TextStyle(
                   color: textColor,

@@ -1,10 +1,11 @@
-// import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+
+import 'package:flutter_cuaca/route.dart';
 
 class FavoriteService {
   static late Box _box;
 
-  // static final Box _box = Hive.box('weatherBox');
   static Future<void> init() async {
     if (!Hive.isBoxOpen('weatherBox')) {
       _box = await Hive.openBox('weatherBox');
@@ -14,19 +15,19 @@ class FavoriteService {
   }
 
   /// Ambil daftar kota favorit dari Hive
-  static List<Map<String, String>> getFavorites() {
+  static List<Map<String, dynamic>> getFavorites() {
     final raw = _box.get('favorites', defaultValue: []);
-    return List<Map<String, String>>.from(
-      (raw as List).map((e) => Map<String, String>.from(e)),
+    return List<Map<String, dynamic>>.from(
+      (raw as List).map((e) => Map<String, dynamic>.from(e)),
     );
   }
 
   /// Tambahkan kota ke favorit
-  static Future<void> addFavorite(String city, String full) async {
+  static Future<void> addFavorite(Map<String, dynamic> cityData) async {
     final favorites = getFavorites();
-    final exists = favorites.any((item) => item['full'] == full);
+    final exists = favorites.any((item) => item['full'] == cityData['full']);
     if (!exists) {
-      favorites.add({'name': city, 'full': full});
+      favorites.add(cityData);
       await _box.put('favorites', favorites);
     }
   }
@@ -38,106 +39,41 @@ class FavoriteService {
     await _box.put('favorites', favorites);
   }
 
-  static bool isFavorite(String fullName) {
+  /// Ambil data cuaca dari max 3 kota favorit
+  static Future<List<Map<String, dynamic>>> getFavoriteWeatherData() async {
+    final favorites = getFavorites().take(3).toList();
+    List<Map<String, dynamic>> weatherList = [];
+
+    for (final city in favorites) {
+      final lat = city['lat'];
+      final lon = city['lon'];
+
+      if (lat != null && lon != null) {
+        try {
+          final data = await WeatherService.getWeatherByLatLon(
+            lat: double.parse(lat.toString()),
+            lon: double.parse(lon.toString()),
+          );
+
+          if (data != null) {
+            // Tambahkan informasi kota ke dalam data weather
+            final enrichedData = Map<String, dynamic>.from(data);
+            enrichedData['city_info'] = city; // Simpan info kota favorit
+            weatherList.add(enrichedData);
+          }
+        } catch (e) {
+          debugPrint("Gagal memuat cuaca favorit untuk: ${city['full']} — $e");
+        }
+      } else {
+        debugPrint("Lat/Lon tidak tersedia untuk: ${city['full']}");
+      }
+    }
+
+    return weatherList;
+  }
+
+  static Future<bool> isFavorite(String fullName) async {
     final favorites = getFavorites();
     return favorites.any((item) => item['full'] == fullName);
   }
 }
-
-// Lama Refactor v1
-// class FavoriteService {
-  // static late Box _box;
-
-//   /// Inisialisasi service, panggil di main() sebelum runApp()
-  // static Future<void> init() async {
-  //   if (!Hive.isBoxOpen('weatherBox')) {
-  //     _box = await Hive.openBox('weatherBox');
-  //   } else {
-  //     _box = Hive.box('weatherBox');
-  //   }
-  // }
-
-//   static Future<void> addFavorite(String city, String fullName) async {
-//     final favorites = getFavorites();
-//     final exists = favorites.any((item) => item['full'] == fullName);
-//     if (!exists) {
-//       favorites.add({'name': city, 'full': fullName});
-//       await _box.put('favorites', favorites);
-//     }
-//   }
-
-//   static Future<void> removeFavorite(String fullName) async {
-//     final favorites = getFavorites();
-//     favorites.removeWhere((item) => item['full'] == fullName);
-//     await _box.put('favorites', favorites);
-//   }
-
-//   static List<Map<String, String>> getFavorites() {
-//     final saved = _box.get('favorites', defaultValue: []);
-//     return List<Map<String, String>>.from(
-//       (saved as List).map((e) => Map<String, String>.from(e)),
-//     );
-//   }
-
-  // static bool isFavorite(String fullName) {
-  //   final favorites = getFavorites();
-  //   return favorites.any((item) => item['full'] == fullName);
-  // }
-
-  // static Future<void> clearFavorites() async {
-  //   await _box.put('favorites', []);
-  // }
-// }
-
-// Lama original
-// class FavoriteService {
-//   static const String _boxName = 'weatherBox';
-//   static const String _favoritesKey = 'favorites';
-
-//   final Box _box = Hive.box(_boxName);
-
-//   List<Map<String, String>> getFavorites() {
-//     final saved = _box.get(_favoritesKey, defaultValue: []);
-//     return List<Map<String, String>>.from(
-//       (saved as List).map((e) => Map<String, String>.from(e)),
-//     );
-//   }
-
-//   void addFavorite(String city, String region) {
-//     final favorites = getFavorites();
-//     final exists = favorites.any((item) => item['full'] == region);
-//     if (!exists) {
-//       favorites.add({'name': city, 'full': region});
-//       _box.put(_favoritesKey, favorites);
-//     }
-//   }
-
-//   void removeFavorite(String region) {
-//     final favorites = getFavorites();
-//     favorites.removeWhere((item) => item['full'] == region);
-//     _box.put(_favoritesKey, favorites);
-//   }
-
-//   bool isFavorite(String region) {
-//     return getFavorites().any((item) => item['full'] == region);
-//   }
-
-//   Future<List<Map<String, dynamic>>> loadFavoriteWeather() async {
-//     final favorites = getFavorites();
-//     final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
-
-//     List<Map<String, dynamic>> result = [];
-//     for (var city in favorites) {
-//       final fullName = Uri.encodeComponent(city['full'] ?? city['name'] ?? '');
-//       final url = Uri.parse('$baseUrl/api/search?query=$fullName');
-
-//       final response = await http.get(url);
-//       if (response.statusCode == 200) {
-//         final weatherData = jsonDecode(response.body);
-//         result.add({'city': city, 'weather': weatherData});
-//       }
-//     }
-
-//     return result;
-//   }
-// }

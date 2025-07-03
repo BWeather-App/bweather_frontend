@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_cuaca/route.dart';
-// import 'dart:ui';
 // import 'package:hive/hive.dart';
 
 class WeatherHomePage extends StatefulWidget {
@@ -19,7 +18,7 @@ class WeatherHomePage extends StatefulWidget {
 }
 
 class _WeatherHomePageState extends State<WeatherHomePage> {
-  List<Map<String, dynamic>> favoriteWeatherList = []; // Bersifat public
+  List<Map<String, dynamic>> favoriteWeatherList = [];
   bool isFavoriteLoading = true;
 
   @override
@@ -27,11 +26,10 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     super.initState();
     WeatherModel.loadWeatherData(context);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() => isFavoriteLoading = true);
-      WeatherModel.loadAllFavoriteWeatherData().whenComplete(() {
-        setState(() => isFavoriteLoading = false);
-      });
+    // Pastikan Hive box sudah diinisialisasi
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await FavoriteService.init();
+      await loadFavoriteDataOnce();
     });
   }
 
@@ -39,8 +37,11 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
     setState(() => isFavoriteLoading = true);
 
     try {
-      // Panggil model terpusat untuk ambil data dari Hive
-      await WeatherModel.loadAllFavoriteWeatherData();
+      final data = await FavoriteService.getFavoriteWeatherData();
+      debugPrint("Loaded ${data.length} favorite cities");
+      setState(() {
+        favoriteWeatherList = data;
+      });
     } catch (e) {
       debugPrint("Gagal memuat data favorit: $e");
     } finally {
@@ -62,8 +63,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   @override
   Widget build(BuildContext context) {
     final isLight = Theme.of(context).brightness == Brightness.light;
-    // final textColor = isLight ? const Color(0xFF232B3E) : Colors.white;
-    // final cardColor = isLight ? Colors.white : Colors.white.withOpacity(0.05);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -74,279 +73,264 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
             return ValueListenableBuilder<Map<String, dynamic>>(
               valueListenable: WeatherModel.weatherData,
               builder: (context, weatherData, _) {
-                return ValueListenableBuilder<List<Map<String, dynamic>>>(
-                  valueListenable: WeatherModel.favoriteWeatherList,
-                  builder: (context, favoriteWeatherList, _) {
-                    final rawWeather = weatherData?['weather'];
-                    final weather =
-                        (rawWeather is Map &&
-                                rawWeather['cuaca_saat_ini'] is Map)
-                            ? Map<String, dynamic>.from(
-                              rawWeather['cuaca_saat_ini'],
-                            )
-                            : <String, dynamic>{};
+                final rawWeather = weatherData?['weather'];
+                final weather =
+                    (rawWeather is Map && rawWeather['cuaca_saat_ini'] is Map)
+                        ? Map<String, dynamic>.from(
+                          rawWeather['cuaca_saat_ini'],
+                        )
+                        : <String, dynamic>{};
 
-                    final forecastList = <Map<String, dynamic>>[];
+                final forecastList = <Map<String, dynamic>>[];
 
-                    if (rawWeather is Map) {
-                      final keys = [
-                        'kemarin',
-                        'hari_ini',
-                        'besok',
-                        'lusa',
-                        'hari_ke_3',
-                      ];
-                      for (final key in keys) {
-                        final item = rawWeather[key];
-                        if (item is Map) {
-                          forecastList.add(Map<String, dynamic>.from(item));
-                        }
-                      }
+                if (rawWeather is Map) {
+                  final keys = [
+                    'kemarin',
+                    'hari_ini',
+                    'besok',
+                    'lusa',
+                    'hari_ke_3',
+                  ];
+                  for (final key in keys) {
+                    final item = rawWeather[key];
+                    if (item is Map) {
+                      forecastList.add(Map<String, dynamic>.from(item));
                     }
+                  }
+                }
 
-                    final current = weatherData?['weather'];
-                    final lat = weatherData?['location']?['lat'];
-                    final lon = weatherData?['location']?['lon'];
+                final current = weatherData?['weather'];
+                final lat = weatherData?['location']?['lat'];
+                final lon = weatherData?['location']?['lon'];
 
-                    final description = WeatherModel.getWeatherDescription(
-                      weather,
-                    );
+                final description = WeatherModel.getWeatherDescription(weather);
+                final mainCondition = weather['main'] ?? description;
 
-                    final mainCondition = weather['main'] ?? description;
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        WeatherHeader(
-                          location: weatherData?['location'],
-                          isLight: isLight,
-                          onAddCity: () async {
-                            final result = await showGeneralDialog<String>(
-                              context: context,
-                              barrierDismissible: true,
-                              barrierLabel: "Search",
-                              barrierColor: Colors.transparent,
-                              pageBuilder:
-                                  (_, __, ___) => const SearchCityPage(),
-                              transitionBuilder: (
-                                context,
-                                animation,
-                                __,
-                                child,
-                              ) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: child,
-                                );
-                              },
-                              transitionDuration: const Duration(
-                                milliseconds: 200,
-                              ),
-                            );
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    RestartWidget.restartApp(context); // soft-restart app
+                  },
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          WeatherHeader(
+                            location: weatherData?['location'],
+                            isLight: isLight,
+                            onAddCity: () async {
+                              final result = await showGeneralDialog<String>(
+                                context: context,
+                                barrierDismissible: true,
+                                barrierLabel: "Search",
+                                barrierColor: Colors.transparent,
+                                pageBuilder:
+                                    (_, __, ___) => const SearchCityPage(),
+                                transitionBuilder: (
+                                  context,
+                                  animation,
+                                  __,
+                                  child,
+                                ) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  );
+                                },
+                                transitionDuration: const Duration(
+                                  milliseconds: 200,
+                                ),
+                              );
 
-                            if (result != null && result.isNotEmpty) {
-                              print("Kota dipilih: $result");
-                            }
-                          },
-                          onToggleTheme: widget.onToggleTheme,
-                        ),
-                        Expanded(
-                          child: PageView.builder(
-                            itemCount:
-                                1 +
-                                favoriteWeatherList.length.clamp(
-                                  0,
-                                  3,
-                                ), // 1 = lokasi saat ini
-                            itemBuilder: (context, index) {
-                              final isLight =
-                                  Theme.of(context).brightness ==
-                                  Brightness.light;
-                              final textColor =
-                                  isLight
-                                      ? const Color(0xFF232B3E)
-                                      : Colors.white;
-                              final cardColor =
-                                  isLight
-                                      ? Colors.white
-                                      : Colors.white.withOpacity(0.05);
-                              if (index == 0) {
-                                return Stack(
-                                  children: [
-                                    if (!isLoading && weatherData != null)
-                                      Center(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            if (mainCondition != null) ...[
-                                              Image.asset(
-                                                WeatherModel.getIconAsset(
-                                                  mainCondition,
-                                                  !isLight,
-                                                ),
-                                                width: 80,
-                                                height: 70,
-                                              ),
-                                              const SizedBox(height: 10),
-                                            ],
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  "${(weather['suhu'] ?? 0).round()}",
-                                                  style: TextStyle(
-                                                    color: textColor,
-                                                    fontSize: 80,
-                                                    fontWeight: FontWeight.bold,
+                              if (result != null && result.isNotEmpty) {
+                                print("Kota dipilih: $result");
+                                await loadFavoriteDataOnce();
+                              }
+                            },
+                            onToggleTheme: widget.onToggleTheme,
+                          ),
+                          SizedBox(
+                            height:
+                                MediaQuery.of(context).size.height *
+                                0.8, // agar PageView cukup tinggi
+                            child: PageView.builder(
+                              itemCount: 1 + favoriteWeatherList.length,
+                              itemBuilder: (context, index) {
+                                final isLight =
+                                    Theme.of(context).brightness ==
+                                    Brightness.light;
+                                final textColor =
+                                    isLight
+                                        ? const Color(0xFF232B3E)
+                                        : Colors.white;
+                                final cardColor =
+                                    isLight
+                                        ? Colors.white
+                                        : Colors.white.withOpacity(0.05);
+
+                                if (index == 0) {
+                                  // Halaman cuaca lokasi saat ini
+                                  return Stack(
+                                    children: [
+                                      if (!isLoading && weatherData != null)
+                                        Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              if (mainCondition != null) ...[
+                                                Image.asset(
+                                                  WeatherModel.getIconAsset(
+                                                    mainCondition,
+                                                    !isLight,
                                                   ),
+                                                  width: 80,
+                                                  height: 70,
                                                 ),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                        top: 12,
-                                                      ),
-                                                  child: Text(
-                                                    "°C",
+                                                const SizedBox(height: 10),
+                                              ],
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    "${(weather['suhu'] ?? 0).round()}",
                                                     style: TextStyle(
                                                       color: textColor,
-                                                      fontSize: 22,
+                                                      fontSize: 80,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          top: 12,
+                                                        ),
+                                                    child: Text(
+                                                      "°C",
+                                                      style: TextStyle(
+                                                        color: textColor,
+                                                        fontSize: 22,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                WeatherModel.getWeatherDescription(
+                                                  weather,
                                                 ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              WeatherModel.getWeatherDescription(
-                                                weather,
-                                              ),
-                                              style: TextStyle(
-                                                color: textColor,
-                                                fontSize: 18,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                            const SizedBox(height: 20),
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.air,
+                                                style: TextStyle(
                                                   color: textColor,
-                                                  size: 24,
+                                                  fontSize: 18,
                                                 ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  "Angin",
-                                                  style: TextStyle(
+                                                textAlign: TextAlign.center,
+                                              ),
+                                              const SizedBox(height: 20),
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Icon(
+                                                    Icons.air,
                                                     color: textColor,
+                                                    size: 24,
                                                   ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  "${weather['kecepatan_angin'] ?? '-'} m/s",
-                                                  style: TextStyle(
-                                                    color: textColor,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-
-                                    if (isLoading)
-                                      const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-
-                                    if (!isLoading && weatherData == null)
-                                      Center(
-                                        child: Text(
-                                          "Gagal memuat data cuaca.",
-                                          style: TextStyle(color: textColor),
-                                        ),
-                                      ),
-
-                                    if (!isLoading && weatherData != null)
-                                      DraggableScrollableSheet(
-                                        initialChildSize: 0.25,
-                                        minChildSize: 0.25,
-                                        maxChildSize: 1.0,
-                                        builder: (context, scrollController) {
-                                          return WeatherDetailSheet(
-                                            scrollController: scrollController,
-                                            forecastList: forecastList,
-                                            current: current ?? {},
-                                            isLight: isLight,
-                                            cardColor: cardColor,
-                                            getWeatherDescription:
-                                                WeatherModel
-                                                    .getWeatherDescription,
-                                            formatTime: formatTimeFromTimestamp,
-                                            getIconAsset:
-                                                (condition, isDark) =>
-                                                    WeatherModel.getIconAsset(
-                                                      condition,
-                                                      isDark,
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    "Angin",
+                                                    style: TextStyle(
+                                                      color: textColor,
                                                     ),
-                                            lat: lat,
-                                            lon: lon,
-                                          );
-                                        },
-                                      ),
-                                  ],
-                                );
-                              } else {
-                                final cityWeather =
-                                    favoriteWeatherList[index - 1];
-                                // 🐞 Debug cepat di sini
-                                debugPrint(
-                                  '======= DEBUG FAVORITE CITY =======',
-                                );
-                                debugPrint(
-                                  'rawCityWeather runtimeType: ${cityWeather.runtimeType}',
-                                );
-                                debugPrint(
-                                  'weather type: ${cityWeather['weather']?.runtimeType}',
-                                );
-                                debugPrint('full data: $cityWeather');
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    "${weather['kecepatan_angin'] ?? '-'} m/s",
+                                                    style: TextStyle(
+                                                      color: textColor,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
 
-                                final weather = cityWeather['weather'];
-                                if (weather == null ||
-                                    weather is! Map<String, dynamic>) {
-                                  return Center(
-                                    child: Text(
-                                      "Cuaca tidak tersedia",
-                                      style: TextStyle(color: Colors.grey),
-                                    ),
+                                      if (isLoading)
+                                        const Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+
+                                      if (!isLoading && weatherData == null)
+                                        Center(
+                                          child: Text(
+                                            "Gagal memuat data cuaca.",
+                                            style: TextStyle(color: textColor),
+                                          ),
+                                        ),
+
+                                      if (!isLoading && weatherData != null)
+                                        DraggableScrollableSheet(
+                                          initialChildSize: 0.25,
+                                          minChildSize: 0.25,
+                                          maxChildSize: 1.0,
+                                          builder: (context, scrollController) {
+                                            return WeatherDetailSheet(
+                                              scrollController:
+                                                  scrollController,
+                                              forecastList: forecastList,
+                                              current: current ?? {},
+                                              isLight: isLight,
+                                              cardColor: cardColor,
+                                              getWeatherDescription:
+                                                  WeatherModel
+                                                      .getWeatherDescription,
+                                              formatTime:
+                                                  formatTimeFromTimestamp,
+                                              getIconAsset:
+                                                  (condition, isDark) =>
+                                                      WeatherModel.getIconAsset(
+                                                        condition,
+                                                        isDark,
+                                                      ),
+                                              lat: lat,
+                                              lon: lon,
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  );
+                                } else {
+                                  // Halaman cuaca kota favorit
+                                  if (isFavoriteLoading) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+
+                                  final cityWeather =
+                                      favoriteWeatherList[index - 1];
+                                  return buildFavoriteWeatherView(
+                                    cityWeather,
+                                    isLight: isLight,
+                                    textColor: textColor,
+                                    cardColor: cardColor,
+                                    formatTimeFromTimestamp:
+                                        formatTimeFromTimestamp,
                                   );
                                 }
-
-                                buildFavoriteWeatherView(
-                                  cityWeather,
-                                  isLight: isLight,
-                                  textColor: textColor,
-                                  cardColor: cardColor,
-                                  formatTimeFromTimestamp:
-                                      formatTimeFromTimestamp,
-                                );
-                              }
-
-                              //else {
-                              //   final cityWeather = favoriteWeatherList[index - 1];
-                              //   return buildFavoriteWeatherView(cityWeather);
-                              // }
-                            },
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
+                        ],
+                      ),
+                    ],
+                  ),
                 );
               },
             );
@@ -357,24 +341,151 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   }
 }
 
-// Favorite Kota lama
-// Widget buildFavoriteWeatherView(Map<String, dynamic> cityWeather) {
-//   return Padding(
-//     padding: const EdgeInsets.all(16),
-//     child: Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Text(
-//           cityWeather['location'] ?? 'Tidak diketahui',
-//           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-//         ),
-//         const SizedBox(height: 10),
-//         Text(
-//           '${cityWeather['temperature']}°C',
-//           style: const TextStyle(fontSize: 48),
-//         ),
-//         // ...tambahkan forecast dan info lain
-//       ],
-//     ),
-//   );
-// }
+Widget buildFavoriteWeatherView(
+  Map<String, dynamic> cityWeather, {
+  required bool isLight,
+  required Color textColor,
+  required Color cardColor,
+  required String Function(int) formatTimeFromTimestamp,
+}) {
+  debugPrint(
+    "Building favorite weather view for: ${cityWeather['city_info']?['full']}",
+  );
+
+  final weather = cityWeather['weather'] ?? {};
+  final current = weather['cuaca_saat_ini'] ?? {};
+  final cityInfo = cityWeather['city_info'] ?? {};
+
+  if (current.isEmpty) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: textColor, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            "Data cuaca tidak tersedia",
+            style: TextStyle(color: textColor, fontSize: 16),
+          ),
+          Text(
+            "untuk ${cityInfo['full'] ?? 'kota favorit'}",
+            style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  final forecastList = <Map<String, dynamic>>[];
+  final keys = ['kemarin', 'hari_ini', 'besok', 'lusa', 'hari_ke_3'];
+
+  for (final key in keys) {
+    final item = weather[key];
+    if (item is Map) {
+      forecastList.add(Map<String, dynamic>.from(item));
+    }
+  }
+
+  final lat = cityWeather['location']?['lat'];
+  final lon = cityWeather['location']?['lon'];
+
+  return Stack(
+    children: [
+      Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon cuaca
+            Image.asset(
+              WeatherModel.getIconAsset(
+                WeatherModel.getWeatherDescription(current),
+                !isLight,
+              ),
+              width: 80,
+              height: 70,
+            ),
+            const SizedBox(height: 10),
+
+            // Suhu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${(current['suhu'] ?? 0).round()}",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 80,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    "°C",
+                    style: TextStyle(color: textColor, fontSize: 22),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Deskripsi cuaca
+            Text(
+              WeatherModel.getWeatherDescription(current),
+              style: TextStyle(color: textColor, fontSize: 18),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+
+            // Nama kota
+            Text(
+              cityInfo['full'] ?? 'Kota Favorit',
+              style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+
+            // Info angin
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.air, color: textColor, size: 24),
+                const SizedBox(width: 8),
+                Text("Angin", style: TextStyle(color: textColor)),
+                const SizedBox(width: 8),
+                Text(
+                  "${current['kecepatan_angin'] ?? '-'} m/s",
+                  style: TextStyle(color: textColor),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+
+      // Detail sheet
+      DraggableScrollableSheet(
+        initialChildSize: 0.25,
+        minChildSize: 0.25,
+        maxChildSize: 1.0,
+        builder: (context, scrollController) {
+          return WeatherDetailSheet(
+            scrollController: scrollController,
+            forecastList: forecastList,
+            current: current,
+            isLight: isLight,
+            cardColor: cardColor,
+            getWeatherDescription: WeatherModel.getWeatherDescription,
+            formatTime: formatTimeFromTimestamp,
+            getIconAsset:
+                (condition, isDark) =>
+                    WeatherModel.getIconAsset(condition, isDark),
+            lat: lat,
+            lon: lon,
+          );
+        },
+      ),
+    ],
+  );
+}

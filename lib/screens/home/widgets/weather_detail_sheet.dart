@@ -8,7 +8,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math' as math;
-// import 'package:hive/hive.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class WeatherDetailSheet extends StatefulWidget {
@@ -18,10 +17,10 @@ class WeatherDetailSheet extends StatefulWidget {
   final bool isLight;
   final Color cardColor;
   final String Function(Map<String, dynamic>) getWeatherDescription;
-  final String Function(int) formatTime; // Ubah dari String? ke int
+  final String Function(int) formatTime;
   final String Function(dynamic, bool) getIconAsset;
-  final double lat;
-  final double lon;
+  final double? lat;
+  final double? lon;
 
   const WeatherDetailSheet({
     Key? key,
@@ -33,8 +32,8 @@ class WeatherDetailSheet extends StatefulWidget {
     required this.getWeatherDescription,
     required this.formatTime,
     required this.getIconAsset,
-    required this.lat,
-    required this.lon,
+    this.lat,
+    this.lon,
   }) : super(key: key);
 
   @override
@@ -53,33 +52,47 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
   }
 
   Future<void> _fetchWeatherData() async {
+    if (!mounted) return;
     setState(() => isLoading = true);
 
     try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
+      double lat, lon;
 
-      double lat = position.latitude;
-      double lon = position.longitude;
+      // Jika lat/lon sudah disediakan (dari kota favorit), gunakan itu
+      if (widget.lat != null && widget.lon != null) {
+        lat = widget.lat!;
+        lon = widget.lon!;
+      } else {
+        // Jika tidak, gunakan lokasi saat ini
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        lat = position.latitude;
+        lon = position.longitude;
+      }
 
       final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://10.0.2.2:8000';
       final url = '$baseUrl/api/weather?lat=$lat&lon=$lon';
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final raw = json.decode(response.body);
+        final data = Map<String, dynamic>.from(raw);
+
+        if (!mounted) return;
         setState(() {
           weatherData = data;
           isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           error = 'Failed to load weather data';
           isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         error = 'Network error: $e';
         isLoading = false;
@@ -248,7 +261,7 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
 
             final temp = midDayData?['suhu']?.round() ?? 0;
 
-            // 🔥 Gunakan fungsi yang sudah ada
+            // Gunakan fungsi yang sudah ada
             final description = WeatherModel.getWeatherDescription({
               'weather': midDayData,
             });
@@ -766,7 +779,7 @@ class SunPathPainter extends CustomPainter {
     path.moveTo(0, size.height);
     path.quadraticBezierTo(size.width / 2, 0, size.width, size.height);
 
-    canvas.drawPath(path, paint);
+    // canvas.drawPath(path, path);
 
     // Sun position (current time simulation)
     final sunPaint =
