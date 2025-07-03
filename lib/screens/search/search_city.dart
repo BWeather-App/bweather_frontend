@@ -21,6 +21,8 @@ class _SearchCityPageState extends State<SearchCityPage> {
   bool _isLoading = false;
   bool _selectMode = false;
   Set<String> _selectedHistory = {};
+  bool _selectFavoriteMode = false;
+  Set<String> _selectedFavorites = {};
 
   List<Map<String, dynamic>> _favoriteCities = [];
 
@@ -40,6 +42,11 @@ class _SearchCityPageState extends State<SearchCityPage> {
 
   Future<void> _addToFavorites(Map<String, dynamic> cityData) async {
     await FavoriteService.addFavorite(cityData);
+    _initFavorites();
+  }
+
+  Future<void> _removeFromFavorites(String fullName) async {
+    await FavoriteService.removeFavorite(fullName);
     _initFavorites();
   }
 
@@ -140,21 +147,6 @@ class _SearchCityPageState extends State<SearchCityPage> {
             fontSize: 12,
           ),
         ),
-        // trailing: IconButton(
-        //   icon: Icon(
-        //     alreadyFavorite ? Icons.check : Icons.add,
-        //     color: alreadyFavorite ? Colors.greenAccent : iconColor,
-        //   ),
-        //   onPressed: () async {
-        //     final cityData = {
-        //       'name': city,
-        //       'full': region,
-        //       'lat': lat,
-        //       'lon': lon,
-        //     };
-        //     await _addToFavorites(cityData);
-        //   },
-        // ),
         onTap: () async {
           await saveSearchHistory(city);
           Navigator.pushNamed(context, '/city-weather', arguments: city);
@@ -262,8 +254,8 @@ class _SearchCityPageState extends State<SearchCityPage> {
                         },
                       ),
                     ),
-                  if (!isKeyboardVisible &&
-                      !_isLoading &&
+                  if (!_isLoading &&
+                      !isKeyboardVisible &&
                       _favoriteCities.isNotEmpty)
                     Expanded(
                       child: Column(
@@ -283,48 +275,117 @@ class _SearchCityPageState extends State<SearchCityPage> {
                               itemCount: _favoriteCities.length,
                               itemBuilder: (context, index) {
                                 final city = _favoriteCities[index];
-                                return Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: cardColor,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: ListTile(
-                                    leading: const Icon(Icons.star),
-                                    title: Text(
-                                      city['name'] ?? '',
-                                      style: GoogleFonts.poppins(
-                                        color: textColor,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      city['full'] ?? '',
-                                      style: GoogleFonts.poppins(
-                                        color: subtitleColor,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    onTap: () {
+                                final isSelected = _selectedFavorites.contains(
+                                  city['full'],
+                                );
+
+                                return GestureDetector(
+                                  onLongPress: () {
+                                    setState(() {
+                                      _selectFavoriteMode = true;
+                                      _selectedFavorites.add(city['full']);
+                                    });
+                                  },
+                                  onTap: () {
+                                    if (_selectFavoriteMode) {
+                                      setState(() {
+                                        isSelected
+                                            ? _selectedFavorites.remove(
+                                              city['full'],
+                                            )
+                                            : _selectedFavorites.add(
+                                              city['full'],
+                                            );
+                                        if (_selectedFavorites.isEmpty) {
+                                          _selectFavoriteMode = false;
+                                        }
+                                      });
+                                    } else {
                                       Navigator.pushNamed(
                                         context,
                                         '/city-weather',
                                         arguments: city['full'],
                                       );
-                                    },
+                                    }
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          isSelected
+                                              ? selectedCardColor
+                                              : cardColor,
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: ListTile(
+                                      leading: IconButton(
+                                        icon: Icon(
+                                          Icons.star,
+                                          color: Colors.amber.shade600,
+                                        ),
+                                        onPressed: () async {
+                                          await _removeFromFavorites(
+                                            city['full'],
+                                          );
+                                        },
+                                      ),
+                                      title: Text(
+                                        city['name'] ?? '',
+                                        style: GoogleFonts.poppins(
+                                          color: textColor,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        city['full'] ?? '',
+                                        style: GoogleFonts.poppins(
+                                          color: subtitleColor,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 );
                               },
                             ),
                           ),
+                          if (_selectFavoriteMode)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    for (final fullName in _selectedFavorites) {
+                                      await _removeFromFavorites(fullName);
+                                    }
+
+                                    setState(() {
+                                      _selectedFavorites.clear();
+                                      _selectFavoriteMode = false;
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.redAccent,
+                                  ),
+                                  label: Text(
+                                    "Hapus Favorit Terpilih",
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.redAccent,
+                                      fontWeight: FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
 
-                  if (isKeyboardVisible &&
-                      !_isLoading &&
+                  if (!_isLoading &&
+                      isKeyboardVisible &&
                       _suggestions.isEmpty &&
                       _searchHistory.isNotEmpty)
                     Expanded(
@@ -362,8 +423,9 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                         isSelected
                                             ? _selectedHistory.remove(city)
                                             : _selectedHistory.add(city);
-                                        if (_selectedHistory.isEmpty)
+                                        if (_selectedHistory.isEmpty) {
                                           _selectMode = false;
+                                        }
                                       });
                                     } else {
                                       _controller.text = city;

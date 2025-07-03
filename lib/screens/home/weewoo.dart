@@ -21,13 +21,10 @@ class WeatherHomePage extends StatefulWidget {
 class _WeatherHomePageState extends State<WeatherHomePage> {
   List<Map<String, dynamic>> favoriteWeatherList = [];
   bool isFavoriteLoading = true;
-  int currentPageIndex = 0; // Tambahkan ini untuk tracking halaman aktif
-  PageController? pageController; // Tambahkan controller untuk PageView
 
   @override
   void initState() {
     super.initState();
-    pageController = PageController(); // Inisialisasi controller
     WeatherModel.loadWeatherData(context);
 
     // Pastikan Hive box sudah diinisialisasi
@@ -35,12 +32,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
       await FavoriteService.init();
       await loadFavoriteDataOnce();
     });
-  }
-
-  @override
-  void dispose() {
-    pageController?.dispose(); // Dispose controller
-    super.dispose();
   }
 
   Future<void> loadFavoriteDataOnce() async {
@@ -68,32 +59,6 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
   String formatTimeFromTimestamp(int timestamp) {
     final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
     return DateFormat.Hm().format(dt);
-  }
-
-  // Fungsi untuk mendapatkan lokasi yang sesuai dengan halaman aktif
-  Map<String, dynamic>? getCurrentLocation(Map<String, dynamic>? weatherData) {
-    if (currentPageIndex == 0) {
-      // Halaman pertama: lokasi saat ini
-      return weatherData?['location'];
-    } else {
-      // Halaman kota favorit
-      final favoriteIndex = currentPageIndex - 1;
-      if (favoriteIndex >= 0 && favoriteIndex < favoriteWeatherList.length) {
-        final cityWeather = favoriteWeatherList[favoriteIndex];
-        final cityInfo = cityWeather['city_info'] ?? {};
-        final location = cityWeather['location'];
-
-        debugPrint('cityInfo: $cityInfo');
-        debugPrint('location: $location');
-        // Konversi format data kota favorit ke format yang diharapkan header
-        return {
-          'city': cityInfo['name'] ?? cityInfo['full'],
-          'region': location['region'] ?? cityWeather['province'],
-          'country': location['country'],
-        };
-      }
-    }
-    return null;
   }
 
   @override
@@ -154,9 +119,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           WeatherHeader(
-                            location: getCurrentLocation(
-                              weatherData,
-                            ), // Gunakan lokasi dinamis
+                            location: weatherData?['location'],
                             isLight: isLight,
                             onAddCity: () async {
                               final result = await showGeneralDialog<String>(
@@ -194,15 +157,7 @@ class _WeatherHomePageState extends State<WeatherHomePage> {
                                 MediaQuery.of(context).size.height *
                                 0.8, // agar PageView cukup tinggi
                             child: PageView.builder(
-                              controller:
-                                  pageController, // Tambahkan controller
                               itemCount: 1 + favoriteWeatherList.length,
-                              onPageChanged: (index) {
-                                // Update currentPageIndex ketika halaman berubah
-                                setState(() {
-                                  currentPageIndex = index;
-                                });
-                              },
                               itemBuilder: (context, index) {
                                 final isLight =
                                     Theme.of(context).brightness ==
@@ -483,6 +438,14 @@ Widget buildFavoriteWeatherView(
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
+
+            // Nama kota
+            Text(
+              cityInfo['full'] ?? 'Kota Favorit',
+              style: TextStyle(color: textColor.withOpacity(0.7), fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
 
             // Info angin
             Row(
