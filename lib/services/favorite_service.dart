@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:flutter_cuaca/services/weather_service.dart';
+
+import 'package:flutter_cuaca/route.dart';
 
 class FavoriteService {
   static late Box _box;
