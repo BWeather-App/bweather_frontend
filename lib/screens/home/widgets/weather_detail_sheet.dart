@@ -75,7 +75,6 @@ class WeatherWidgets extends StatelessWidget {
     }
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -84,7 +83,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -104,28 +103,25 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                uvIndex.round().toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                getUVDescription(uvIndex),
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+          const SizedBox(height: 12),
+          Text(
+            uvIndex.round().toString(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.w300,
+            ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            getUVDescription(uvIndex),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
           Container(
             height: 4,
             decoration: BoxDecoration(
@@ -153,7 +149,6 @@ class WeatherWidgets extends StatelessWidget {
     final feelsLike = current?['terasa_seperti']?.round() ?? 26;
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -162,7 +157,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -182,6 +177,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
           Text(
             '${feelsLike}°',
             style: const TextStyle(
@@ -190,6 +186,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
+          const SizedBox(height: 8),
           Text(
             'Suhu yang dirasakan\ndengan faktor angin',
             style: TextStyle(
@@ -214,7 +211,6 @@ class WeatherWidgets extends StatelessWidget {
     }
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -223,7 +219,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -243,12 +239,15 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          Expanded(
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 50,
             child: CustomPaint(
               painter: SunPathPainter(sunrise: sunrise, sunset: sunset),
-              size: const Size(double.infinity, 40),
+              size: const Size(double.infinity, 50),
             ),
           ),
+          const SizedBox(height: 8),
           Text(
             'Terbit: $sunrise  Terbenam: $sunset',
             style: TextStyle(
@@ -266,7 +265,6 @@ class WeatherWidgets extends StatelessWidget {
     final humidity = current?['kelembapan']?.round() ?? 87;
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -275,7 +273,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -295,6 +293,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
           Text(
             '$humidity%',
             style: const TextStyle(
@@ -303,6 +302,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
+          const SizedBox(height: 8),
           Text(
             humidity > 70
                 ? 'Kelembaban tinggi,\nterasa lebih panas'
@@ -336,7 +336,6 @@ class WeatherWidgets extends StatelessWidget {
     }
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -345,7 +344,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -361,10 +360,11 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
           Center(
             child: SizedBox(
-              width: 50,
-              height: 50,
+              width: 60,
+              height: 60,
               child: CustomPaint(
                 painter: CompassPainter(windDirection),
                 child: Center(
@@ -372,7 +372,7 @@ class WeatherWidgets extends StatelessWidget {
                     getWindDirectionText(windDirection),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -380,6 +380,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 8),
           Center(
             child: Text(
               '${windSpeed.round()} km/h',
@@ -399,7 +400,6 @@ class WeatherWidgets extends StatelessWidget {
     final rainChance = current?['peluang_hujan']?.round() ?? 74;
 
     return Container(
-      height: 120, // Tinggi tetap untuk konsistensi
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
@@ -408,7 +408,7 @@ class WeatherWidgets extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -428,6 +428,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 12),
           Text(
             '$rainChance%',
             style: const TextStyle(
@@ -436,6 +437,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
+          const SizedBox(height: 8),
           Text(
             rainChance > 70
                 ? 'Kemungkinan besar\nhujan, bawa payung'
