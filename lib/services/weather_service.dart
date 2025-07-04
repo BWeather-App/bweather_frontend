@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'notification_service.dart';
 
 class WeatherService {
   String get _baseUrl =>
@@ -44,6 +45,55 @@ class WeatherService {
     if (data['weather'] == null || data['location'] == null) {
       throw Exception('Data cuaca tidak lengkap');
     }
+    final weather = data['weather'];
+    final lokasi = data['location'];
+    final double suhu = weather['cuaca_saat_ini']['suhu']?.toDouble() ?? 0;
+    final double angin =
+        weather['cuaca_saat_ini']['kecepatan_angin']?.toDouble() ?? 0;
+    final double tekanan =
+        weather['cuaca_saat_ini']['tekanan_udara']?.toDouble() ?? 1000;
+    final int peluangHujan = weather['cuaca_saat_ini']['peluang_hujan'] ?? 0;
+    final int uv = weather['cuaca_saat_ini']['indeks_uv'] ?? 0;
+
+    bool isSuhuEkstrem = suhu < 10 || suhu > 15;
+    bool isAnginEkstrem = angin > 11;
+    bool isTekananEkstrem = tekanan < 900;
+    bool isHujanEkstrem = peluangHujan > 80;
+    bool isUVEkstrem = uv >= 8;
+
+    bool isEkstrem =
+        isSuhuEkstrem ||
+        isAnginEkstrem ||
+        isTekananEkstrem ||
+        isHujanEkstrem ||
+        isUVEkstrem;
+
+    if (isEkstrem) {
+      List<String> detail = [];
+
+      if (isSuhuEkstrem) {
+        detail.add('Suhu: $suhu°C');
+      }
+      if (isAnginEkstrem) {
+        detail.add('Angin: ${angin.toStringAsFixed(1)} m/s');
+      }
+      if (isTekananEkstrem) {
+        detail.add('Tekanan udara: ${tekanan.toStringAsFixed(1)} hPa');
+      }
+      if (isHujanEkstrem) {
+        detail.add('Peluang hujan: ${peluangHujan.toStringAsFixed(0)}%');
+      }
+      if (isUVEkstrem) {
+        detail.add('Indeks UV: $uv');
+      }
+
+      String pesan = 'Cuaca ekstrem terdeteksi!\n' + detail.join('\n');
+
+      await NotificationService.showCuacaEkstrem(
+        lokasi['city'] ?? 'Lokasi tidak diketahui',
+        pesan,
+      );
+    }
 
     return Map<String, dynamic>.from(data);
   }
@@ -70,9 +120,7 @@ class WeatherService {
         .toList();
   }
 
-  static Future<Map<String, dynamic>?> getWeatherByCityFull(
-    String name,
-  ) async {
+  static Future<Map<String, dynamic>?> getWeatherByCityFull(String name) async {
     try {
       final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
       final encoded = Uri.encodeComponent(name);
@@ -80,7 +128,6 @@ class WeatherService {
         Uri.parse('$baseUrl/api/search?query=$encoded'),
       );
       debugPrint("🔍 Request URL: $baseUrl/api/search?query=$encoded");
-
 
       if (response.statusCode == 200) {
         return Map<String, dynamic>.from(json.decode(response.body));

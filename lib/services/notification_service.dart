@@ -6,7 +6,7 @@ class NotificationService {
 
   static Future<void> init() async {
     const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('ic_stat_bweather');
 
     const InitializationSettings initSettings = InitializationSettings(
       android: androidInit,
@@ -16,15 +16,16 @@ class NotificationService {
   }
 
   static Future<void> showCuacaEkstrem(String kota, String info) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'cuaca_channel',
-      'Peringatan Cuaca',
-      channelDescription: 'Notifikasi cuaca ekstrem',
-      importance: Importance.high,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-    );
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'cuaca_channel',
+          'Peringatan Cuaca',
+          channelDescription: 'Notifikasi cuaca ekstrem',
+          importance: Importance.high,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+        );
 
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,

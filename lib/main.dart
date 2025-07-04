@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'services/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'services/permission_service.dart';
 import 'package:flutter_cuaca/route.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -25,6 +27,8 @@ Future<void> main() async {
   Intl.defaultLocale = 'id_ID';
   await Hive.openBox('weatherBox');
   await FavoriteService.init(); // inisialisasi service
+  await NotificationService.init();
+  await mintaIzinNotifikasi();
 
   // runApp(const MyApp());
   runApp(RestartWidget(child: const MyApp()));
