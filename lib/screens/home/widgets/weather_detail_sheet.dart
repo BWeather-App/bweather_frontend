@@ -47,6 +47,17 @@ class WeatherWidgets extends StatelessWidget {
   const WeatherWidgets({Key? key, this.weatherData, required this.context})
     : super(key: key);
 
+  // Konstanta spacing untuk konsistensi
+  static const double _cardPadding = 16.0;
+  static const double _cardBorderRadius = 16.0;
+  static const double _cardGap = 12.0;
+  static const double _headerSpacing = 12.0;
+  static const double _smallSpacing = 4.0;
+  static const double _mediumSpacing = 8.0;
+  static const double _iconSize = 14.0;
+  static const double _cardMinHeight =
+      160.0; // Tambahkan minimum height yang konsisten
+
   // Helper method to get theme colors
   Map<String, Color> _getThemeColors() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -97,18 +108,22 @@ class WeatherWidgets extends StatelessWidget {
       return 'Ekstrem';
     }
 
-    Color getUVColor(double uv) {
-      if (uv < 3) return Colors.green;
-      if (uv < 6) return Colors.yellow;
-      if (uv < 8) return Colors.orange;
-      return Colors.red;
+    List<Color> getUVGradientColors() {
+      return [
+        Colors.green,
+        Colors.yellow,
+        Colors.orange,
+        Colors.red,
+        Colors.purple,
+      ];
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -120,9 +135,9 @@ class WeatherWidgets extends StatelessWidget {
               Icon(
                 Icons.wb_sunny_outlined,
                 color: colors['iconColor'],
-                size: 14,
+                size: _iconSize,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'UV Index',
                 style: TextStyle(
@@ -133,7 +148,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: _headerSpacing),
           Text(
             uvIndex.round().toString(),
             style: TextStyle(
@@ -142,7 +157,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: _smallSpacing),
           Text(
             getUVDescription(uvIndex),
             style: TextStyle(
@@ -151,23 +166,34 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: _headerSpacing),
           Container(
-            height: 4,
+            height: 6,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(2),
-              color: colors['hintColor'],
-            ),
-            child: FractionallySizedBox(
-              widthFactor: (uvIndex / 11).clamp(0.0, 1.0),
-              alignment: Alignment.centerLeft,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(2),
-                  color: getUVColor(uvIndex),
-                ),
+              borderRadius: BorderRadius.circular(3),
+              gradient: LinearGradient(
+                colors: getUVGradientColors(),
+                stops: [0.0, 0.25, 0.5, 0.75, 1.0],
               ),
             ),
+          ),
+          const SizedBox(height: _mediumSpacing),
+          const Spacer(), // Tambahkan spacer untuk mengisi ruang
+          Text(
+            getUVDescription(uvIndex) == 'Rendah'
+                ? 'Aman untuk beraktivitas'
+                : getUVDescription(uvIndex) == 'Sedang'
+                ? 'Sedang sepanjang hari'
+                : getUVDescription(uvIndex) == 'Tinggi'
+                ? 'Gunakan pelindung'
+                : 'Hindari paparan langsung',
+            style: TextStyle(
+              color: colors['subtitleColor'],
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -180,10 +206,11 @@ class WeatherWidgets extends StatelessWidget {
     final feelsLike = current?['terasa_seperti']?.round() ?? 26;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -195,9 +222,9 @@ class WeatherWidgets extends StatelessWidget {
               Icon(
                 Icons.thermostat_outlined,
                 color: colors['iconColor'],
-                size: 14,
+                size: _iconSize,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'Terasa Seperti',
                 style: TextStyle(
@@ -208,7 +235,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: _headerSpacing),
           Text(
             '${feelsLike}°',
             style: TextStyle(
@@ -217,7 +244,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          const SizedBox(height: 8),
+          const Spacer(), // Tambahkan spacer
           Text(
             'Suhu yang dirasakan\ndengan faktor angin',
             style: TextStyle(
@@ -243,10 +270,11 @@ class WeatherWidgets extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -258,9 +286,9 @@ class WeatherWidgets extends StatelessWidget {
               Icon(
                 Icons.wb_sunny_outlined,
                 color: colors['iconColor'],
-                size: 14,
+                size: _iconSize,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'Jalur Matahari',
                 style: TextStyle(
@@ -271,9 +299,8 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 50,
+          const SizedBox(height: _headerSpacing),
+          Expanded(
             child: CustomPaint(
               painter: SunPathPainter(
                 sunrise: sunrise,
@@ -283,7 +310,7 @@ class WeatherWidgets extends StatelessWidget {
               size: const Size(double.infinity, 50),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: _mediumSpacing),
           Text(
             'Terbit: $sunrise  Terbenam: $sunset',
             style: TextStyle(color: colors['subtitleColor'], fontSize: 11),
@@ -299,10 +326,11 @@ class WeatherWidgets extends StatelessWidget {
     final humidity = current?['kelembapan']?.round() ?? 87;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -314,9 +342,9 @@ class WeatherWidgets extends StatelessWidget {
               Icon(
                 Icons.water_drop_outlined,
                 color: colors['iconColor'],
-                size: 14,
+                size: _iconSize,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'Kelembaban',
                 style: TextStyle(
@@ -327,7 +355,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: _headerSpacing),
           Text(
             '$humidity%',
             style: TextStyle(
@@ -336,7 +364,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          const SizedBox(height: 8),
+          const Spacer(), // Tambahkan spacer
           Text(
             humidity > 70
                 ? 'Kelembaban tinggi,\nterasa lebih panas'
@@ -371,10 +399,11 @@ class WeatherWidgets extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -383,8 +412,8 @@ class WeatherWidgets extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.air, color: colors['iconColor'], size: 14),
-              const SizedBox(width: 4),
+              Icon(Icons.air, color: colors['iconColor'], size: _iconSize),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'Arah Angin',
                 style: TextStyle(
@@ -395,34 +424,124 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Center(
-            child: SizedBox(
-              width: 60,
-              height: 60,
-              child: CustomPaint(
-                painter: CompassPainter(
-                  windDirection,
-                  isDark: Theme.of(context).brightness == Brightness.dark,
+          const SizedBox(height: _headerSpacing),
+          Expanded(
+            child: Center(
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF4A9EFF), width: 2),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Center(
-                  child: Text(
-                    getWindDirectionText(windDirection),
-                    style: TextStyle(
-                      color: colors['textColor'],
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                child: CustomPaint(
+                  painter: ModernCompassPainter(
+                    windDirection,
+                    windSpeed,
+                    isDark: Theme.of(context).brightness == Brightness.dark,
+                  ),
+                  child: Stack(
+                    children: [
+                      // Compass direction labels
+                      Positioned(
+                        top: 8,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Text(
+                            'U',
+                            style: TextStyle(
+                              color: colors['textColor'],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: Text(
+                            'T',
+                            style: TextStyle(
+                              color: colors['textColor'],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 8,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Text(
+                            'S',
+                            style: TextStyle(
+                              color: colors['textColor'],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 8,
+                        top: 0,
+                        bottom: 0,
+                        child: Center(
+                          child: Text(
+                            'B',
+                            style: TextStyle(
+                              color: colors['textColor'],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Center wind speed
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${windSpeed.round()}',
+                              style: TextStyle(
+                                color: colors['textColor'],
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'm/s',
+                              style: TextStyle(
+                                color: colors['subtitleColor'],
+                                fontSize: 8,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: _mediumSpacing),
           Center(
             child: Text(
-              '${windSpeed.round()} km/h',
-              style: TextStyle(color: colors['subtitleColor'], fontSize: 11),
+              '${getWindDirectionText(windDirection)} ${windSpeed.round()} m/s',
+              style: TextStyle(
+                color: colors['subtitleColor'],
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ),
         ],
@@ -436,10 +555,11 @@ class WeatherWidgets extends StatelessWidget {
     final rainChance = current?['peluang_hujan']?.round() ?? 74;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      constraints: const BoxConstraints(minHeight: _cardMinHeight),
+      padding: const EdgeInsets.all(_cardPadding),
       decoration: BoxDecoration(
         color: colors['cardColor'],
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(_cardBorderRadius),
         border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
@@ -451,9 +571,9 @@ class WeatherWidgets extends StatelessWidget {
               Icon(
                 Icons.umbrella_outlined,
                 color: colors['iconColor'],
-                size: 14,
+                size: _iconSize,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: _smallSpacing),
               Text(
                 'Kemungkinan Hujan',
                 style: TextStyle(
@@ -464,7 +584,7 @@ class WeatherWidgets extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: _headerSpacing),
           Text(
             '$rainChance%',
             style: TextStyle(
@@ -473,7 +593,7 @@ class WeatherWidgets extends StatelessWidget {
               fontWeight: FontWeight.w300,
             ),
           ),
-          const SizedBox(height: 8),
+          const Spacer(), // Tambahkan spacer
           Text(
             rainChance > 70
                 ? 'Kemungkinan besar\nhujan, bawa payung'
@@ -491,37 +611,42 @@ class WeatherWidgets extends StatelessWidget {
     );
   }
 
-  // Method untuk membuat grid layout 2 kolom seperti gambar 3
   Widget buildWeatherGrid() {
     return Column(
       children: [
         // Row 1: UV Index dan Terasa Seperti
-        Row(
-          children: [
-            Expanded(child: _buildUVIndex()),
-            const SizedBox(width: 12),
-            Expanded(child: _buildTemperature()),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _buildUVIndex()),
+              const SizedBox(width: _cardGap),
+              Expanded(child: _buildTemperature()),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: _cardGap),
 
         // Row 2: Jalur Matahari dan Kelembaban
-        Row(
-          children: [
-            Expanded(child: _buildSunPath()),
-            const SizedBox(width: 12),
-            Expanded(child: _buildHumidity()),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _buildSunPath()),
+              const SizedBox(width: _cardGap),
+              Expanded(child: _buildHumidity()),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: _cardGap),
 
         // Row 3: Arah Angin dan Kemungkinan Hujan
-        Row(
-          children: [
-            Expanded(child: _buildWindDirection()),
-            const SizedBox(width: 12),
-            Expanded(child: _buildChanceOfRain()),
-          ],
+        IntrinsicHeight(
+          child: Row(
+            children: [
+              Expanded(child: _buildWindDirection()),
+              const SizedBox(width: _cardGap),
+              Expanded(child: _buildChanceOfRain()),
+            ],
+          ),
         ),
       ],
     );
@@ -963,18 +1088,24 @@ class SunPathPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     // Gunakan logika warna berdasarkan tema
-    final arcColor = isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3);
-    final fillColor = isDark ? Colors.orange.withOpacity(0.2) : Colors.orange.withOpacity(0.1);
+    final arcColor =
+        isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3);
+    final fillColor =
+        isDark
+            ? Colors.orange.withOpacity(0.2)
+            : Colors.orange.withOpacity(0.1);
     final sunColor = isDark ? Colors.orangeAccent : Colors.deepOrange;
 
-    final paint = Paint()
-      ..color = arcColor
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    final paint =
+        Paint()
+          ..color = arcColor
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
 
-    final fillPaint = Paint()
-      ..color = fillColor
-      ..style = PaintingStyle.fill;
+    final fillPaint =
+        Paint()
+          ..color = fillColor
+          ..style = PaintingStyle.fill;
 
     // Draw sun path arc
     final rect = Rect.fromLTWH(
@@ -987,9 +1118,10 @@ class SunPathPainter extends CustomPainter {
     canvas.drawArc(rect, math.pi, math.pi, false, fillPaint);
 
     // Draw current sun position (dummy)
-    final sunPaint = Paint()
-      ..color = sunColor
-      ..style = PaintingStyle.fill;
+    final sunPaint =
+        Paint()
+          ..color = sunColor
+          ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.3), 4, sunPaint);
   }
@@ -998,50 +1130,134 @@ class SunPathPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class CompassPainter extends CustomPainter {
+class ModernCompassPainter extends CustomPainter {
   final double windDirection;
-  final bool isDark; // Tambahan
+  final double windSpeed;
+  final bool isDark;
 
-  CompassPainter(this.windDirection, {required this.isDark});
+  ModernCompassPainter(
+    this.windDirection,
+    this.windSpeed, {
+    required this.isDark,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
+    final radius = math.min(size.width, size.height) / 2 - 20;
 
-    final borderColor = isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3);
-    final arrowColor = isDark ? Colors.white : Colors.black;
+    // Draw dashed circle
+    final dashedCirclePaint =
+        Paint()
+          ..color =
+              isDark
+                  ? Colors.white.withOpacity(0.4)
+                  : Colors.black.withOpacity(0.4)
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
 
-    // Draw compass circle
-    final circlePaint = Paint()
-      ..color = borderColor
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    _drawDashedCircle(canvas, center, radius, dashedCirclePaint);
 
-    canvas.drawCircle(center, radius, circlePaint);
+    // Draw center glow effect
+    final glowPaint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+
+    final glowRadius = math.min(size.width, size.height) * 0.25;
+    final glowShader = RadialGradient(
+      colors: [
+        Colors.white.withOpacity(0.4),
+        Colors.white.withOpacity(0.1),
+        Colors.transparent,
+      ],
+      stops: [0.0, 0.7, 1.0],
+    ).createShader(Rect.fromCircle(center: center, radius: glowRadius));
+
+    glowPaint.shader = glowShader;
+    canvas.drawCircle(center, glowRadius, glowPaint);
 
     // Draw wind direction arrow
-    final arrowPaint = Paint()
-      ..color = arrowColor
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+    final arrowPaint =
+        Paint()
+          ..color = isDark ? Colors.white : Colors.black
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke;
 
     final angle = (windDirection - 90) * math.pi / 180;
+    final arrowStart = Offset(
+      center.dx - radius * 0.6 * math.cos(angle),
+      center.dy - radius * 0.6 * math.sin(angle),
+    );
     final arrowEnd = Offset(
-      center.dx + radius * 0.5 * math.cos(angle),
-      center.dy + radius * 0.5 * math.sin(angle),
+      center.dx + radius * 0.6 * math.cos(angle),
+      center.dy + radius * 0.6 * math.sin(angle),
     );
 
-    canvas.drawLine(center, arrowEnd, arrowPaint);
+    canvas.drawLine(arrowStart, arrowEnd, arrowPaint);
 
     // Draw arrow head
-    final arrowHeadPaint = Paint()
-      ..color = arrowColor
-      ..style = PaintingStyle.fill;
+    final arrowHeadPaint =
+        Paint()
+          ..color = isDark ? Colors.white : Colors.black
+          ..style = PaintingStyle.fill;
 
-    canvas.drawCircle(arrowEnd, 3, arrowHeadPaint);
+    final arrowHeadSize = math.min(size.width, size.height) * 0.04;
+    final arrowHeadAngle1 = angle + math.pi * 0.8;
+    final arrowHeadAngle2 = angle - math.pi * 0.8;
+
+    final arrowHead1 = Offset(
+      arrowEnd.dx - arrowHeadSize * math.cos(arrowHeadAngle1),
+      arrowEnd.dy - arrowHeadSize * math.sin(arrowHeadAngle1),
+    );
+    final arrowHead2 = Offset(
+      arrowEnd.dx - arrowHeadSize * math.cos(arrowHeadAngle2),
+      arrowEnd.dy - arrowHeadSize * math.sin(arrowHeadAngle2),
+    );
+
+    final arrowHeadPath =
+        Path()
+          ..moveTo(arrowEnd.dx, arrowEnd.dy)
+          ..lineTo(arrowHead1.dx, arrowHead1.dy)
+          ..lineTo(arrowHead2.dx, arrowHead2.dy)
+          ..close();
+
+    canvas.drawPath(arrowHeadPath, arrowHeadPaint);
+
+    // Draw small circle at the back of arrow
+    final backCirclePaint =
+        Paint()
+          ..color = isDark ? Colors.white : Colors.black
+          ..style = PaintingStyle.fill;
+
+    final backCircleRadius = math.min(size.width, size.height) * 0.02;
+    canvas.drawCircle(arrowStart, backCircleRadius, backCirclePaint);
+  }
+
+  void _drawDashedCircle(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+  ) {
+    final dashLength = 8.0;
+    final dashSpace = 6.0;
+    final circumference = 2 * math.pi * radius;
+    final dashCount = (circumference / (dashLength + dashSpace)).floor();
+
+    for (int i = 0; i < dashCount; i++) {
+      final startAngle = (i * 2 * math.pi) / dashCount;
+      final endAngle = startAngle + (dashLength / circumference) * 2 * math.pi;
+
+      final startX = center.dx + radius * math.cos(startAngle);
+      final startY = center.dy + radius * math.sin(startAngle);
+      final endX = center.dx + radius * math.cos(endAngle);
+      final endY = center.dy + radius * math.sin(endAngle);
+
+      canvas.drawLine(Offset(startX, startY), Offset(endX, endY), paint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
