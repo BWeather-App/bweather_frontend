@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_cuaca/route.dart';
 
 class WeatherModel {
-  // State global yang bisa diakses dari mana saja
-  static final weatherData = ValueNotifier<Map<String, dynamic>>({});
+  // Lokasi saat ini
+  static final ValueNotifier<Map<String, dynamic>> weatherData =
+      ValueNotifier<Map<String, dynamic>>({});
   static final ValueNotifier<bool> isLoading = ValueNotifier(true);
+
+  // Favorite (per kota, dipakai untuk preview)
+  static final ValueNotifier<List<Map<String, dynamic>>> favoriteWeatherList =
+      ValueNotifier<List<Map<String, dynamic>>>([]);
+  static final ValueNotifier<bool> isFavoriteLoading = ValueNotifier(false);
 
   // Fungsi untuk memuat data cuaca berdasarkan lokasi saat ini
   static Future<void> loadWeatherData(BuildContext context) async {
@@ -31,7 +37,44 @@ class WeatherModel {
       isLoading.value = false;
     }
   }
-  
+
+  // Untuk kota favorit
+  static Future<void> loadAllFavoriteWeatherData() async {
+    final favorites = FavoriteService.getFavorites().take(3).toList();
+    List<Map<String, dynamic>> weatherList = [];
+
+    for (final city in favorites) {
+      final fullName = city['name'];
+      if (fullName != null) {
+        try {
+          final data = await WeatherService.getWeatherByCityFull(fullName);
+          if (data != null && data['weather'] != null) {
+            final rawWeather = data['weather'];
+            final parsedCurrent = rawWeather['cuaca_saat_ini'];
+            final forecast =
+                [
+                  rawWeather['kemarin'],
+                  rawWeather['hari_ini'],
+                  rawWeather['besok'],
+                  rawWeather['lusa'],
+                  rawWeather['hari_ke_3'],
+                ].whereType<Map>().toList();
+
+            weatherList.add({
+              "current": parsedCurrent, // <- ini untuk weather
+              "forecast": forecast,
+              "city": fullName,
+            });
+          }
+        } catch (e) {
+          debugPrint("Gagal ambil cuaca untuk: $fullName => $e");
+        }
+      }
+    }
+
+    favoriteWeatherList.value = weatherList;
+  }
+
   // Deskripsi kondisi cuaca berdasarkan nilai suhu, kelembapan, dan peluang hujan
   static String getWeatherDescription(Map<String, dynamic> weather) {
     final weatherDetailRaw = weather['weather'];
