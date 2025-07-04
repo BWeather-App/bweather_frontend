@@ -42,8 +42,37 @@ class WeatherDetailSheet extends StatefulWidget {
 
 class WeatherWidgets extends StatelessWidget {
   final Map<String, dynamic>? weatherData;
+  final BuildContext context;
 
-  const WeatherWidgets({Key? key, this.weatherData}) : super(key: key);
+  const WeatherWidgets({Key? key, this.weatherData, required this.context})
+    : super(key: key);
+
+  // Helper method to get theme colors
+  Map<String, Color> _getThemeColors() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return {
+      'blurBackgroundColor':
+          isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+      'textColor': isDark ? Colors.white : Colors.black,
+      'hintColor': isDark ? Colors.white38 : Colors.black38,
+      'iconColor': isDark ? Colors.white70 : Colors.black54,
+      'subtitleColor': isDark ? Colors.white70 : Colors.black54,
+      'inputBoxColor':
+          isDark
+              ? Colors.white.withOpacity(0.15)
+              : Colors.black.withOpacity(0.05),
+      'cardColor':
+          isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.03),
+      'borderColor':
+          isDark
+              ? Colors.white.withOpacity(0.2)
+              : Colors.black.withOpacity(0.1),
+    };
+  }
 
   String _formatTime(String? dateTimeString) {
     if (dateTimeString == null) return '--:--';
@@ -56,6 +85,7 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildUVIndex() {
+    final colors = _getThemeColors();
     final current = weatherData?['weather']['cuaca_saat_ini'];
     final uvIndex = current?['indeks_uv']?.toDouble() ?? 2.0;
 
@@ -77,9 +107,9 @@ class WeatherWidgets extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,14 +119,14 @@ class WeatherWidgets extends StatelessWidget {
             children: [
               Icon(
                 Icons.wb_sunny_outlined,
-                color: Colors.white.withOpacity(0.6),
+                color: colors['iconColor'],
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 'UV Index',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -106,8 +136,8 @@ class WeatherWidgets extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             uvIndex.round().toString(),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors['textColor'],
               fontSize: 28,
               fontWeight: FontWeight.w300,
             ),
@@ -116,7 +146,7 @@ class WeatherWidgets extends StatelessWidget {
           Text(
             getUVDescription(uvIndex),
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: colors['subtitleColor'],
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -126,7 +156,7 @@ class WeatherWidgets extends StatelessWidget {
             height: 4,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(2),
-              color: Colors.white.withOpacity(0.2),
+              color: colors['hintColor'],
             ),
             child: FractionallySizedBox(
               widthFactor: (uvIndex / 11).clamp(0.0, 1.0),
@@ -145,15 +175,16 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildTemperature() {
+    final colors = _getThemeColors();
     final current = weatherData?['weather']['cuaca_saat_ini'];
     final feelsLike = current?['terasa_seperti']?.round() ?? 26;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -163,14 +194,14 @@ class WeatherWidgets extends StatelessWidget {
             children: [
               Icon(
                 Icons.thermostat_outlined,
-                color: Colors.white.withOpacity(0.6),
+                color: colors['iconColor'],
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 'Terasa Seperti',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -180,8 +211,8 @@ class WeatherWidgets extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '${feelsLike}°',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors['textColor'],
               fontSize: 28,
               fontWeight: FontWeight.w300,
             ),
@@ -190,7 +221,7 @@ class WeatherWidgets extends StatelessWidget {
           Text(
             'Suhu yang dirasakan\ndengan faktor angin',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: colors['subtitleColor'],
               fontSize: 11,
               height: 1.2,
             ),
@@ -201,6 +232,7 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildSunPath() {
+    final colors = _getThemeColors();
     final todayData = weatherData?['weather']['hari_ini'] as List? ?? [];
     String sunrise = '05:46';
     String sunset = '17:27';
@@ -213,9 +245,9 @@ class WeatherWidgets extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -225,14 +257,14 @@ class WeatherWidgets extends StatelessWidget {
             children: [
               Icon(
                 Icons.wb_sunny_outlined,
-                color: Colors.white.withOpacity(0.6),
+                color: colors['iconColor'],
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 'Jalur Matahari',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -243,17 +275,18 @@ class WeatherWidgets extends StatelessWidget {
           SizedBox(
             height: 50,
             child: CustomPaint(
-              painter: SunPathPainter(sunrise: sunrise, sunset: sunset),
+              painter: SunPathPainter(
+                sunrise: sunrise,
+                sunset: sunset,
+                isDark: Theme.of(context).brightness == Brightness.dark,
+              ),
               size: const Size(double.infinity, 50),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Terbit: $sunrise  Terbenam: $sunset',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
-              fontSize: 11,
-            ),
+            style: TextStyle(color: colors['subtitleColor'], fontSize: 11),
           ),
         ],
       ),
@@ -261,15 +294,16 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildHumidity() {
+    final colors = _getThemeColors();
     final current = weatherData?['weather']['cuaca_saat_ini'];
     final humidity = current?['kelembapan']?.round() ?? 87;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,14 +313,14 @@ class WeatherWidgets extends StatelessWidget {
             children: [
               Icon(
                 Icons.water_drop_outlined,
-                color: Colors.white.withOpacity(0.6),
+                color: colors['iconColor'],
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 'Kelembaban',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -296,8 +330,8 @@ class WeatherWidgets extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '$humidity%',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors['textColor'],
               fontSize: 28,
               fontWeight: FontWeight.w300,
             ),
@@ -308,7 +342,7 @@ class WeatherWidgets extends StatelessWidget {
                 ? 'Kelembaban tinggi,\nterasa lebih panas'
                 : 'Kelembaban dalam\nkondisi normal',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: colors['subtitleColor'],
               fontSize: 11,
               height: 1.2,
             ),
@@ -319,6 +353,7 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildWindDirection() {
+    final colors = _getThemeColors();
     final current = weatherData?['weather']['cuaca_saat_ini'];
     final windDirection = current?['arah_angin']?.toDouble() ?? 180.0;
     final windSpeed = current?['kecepatan_angin']?.toDouble() ?? 18.0;
@@ -338,9 +373,9 @@ class WeatherWidgets extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,12 +383,12 @@ class WeatherWidgets extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.air, color: Colors.white.withOpacity(0.6), size: 14),
+              Icon(Icons.air, color: colors['iconColor'], size: 14),
               const SizedBox(width: 4),
               Text(
                 'Arah Angin',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -366,12 +401,15 @@ class WeatherWidgets extends StatelessWidget {
               width: 60,
               height: 60,
               child: CustomPaint(
-                painter: CompassPainter(windDirection),
+                painter: CompassPainter(
+                  windDirection,
+                  isDark: Theme.of(context).brightness == Brightness.dark,
+                ),
                 child: Center(
                   child: Text(
                     getWindDirectionText(windDirection),
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: colors['textColor'],
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -384,10 +422,7 @@ class WeatherWidgets extends StatelessWidget {
           Center(
             child: Text(
               '${windSpeed.round()} km/h',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.6),
-                fontSize: 11,
-              ),
+              style: TextStyle(color: colors['subtitleColor'], fontSize: 11),
             ),
           ),
         ],
@@ -396,15 +431,16 @@ class WeatherWidgets extends StatelessWidget {
   }
 
   Widget _buildChanceOfRain() {
+    final colors = _getThemeColors();
     final current = weatherData?['weather']['cuaca_saat_ini'];
     final rainChance = current?['peluang_hujan']?.round() ?? 74;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: colors['cardColor'],
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: colors['borderColor']!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,14 +450,14 @@ class WeatherWidgets extends StatelessWidget {
             children: [
               Icon(
                 Icons.umbrella_outlined,
-                color: Colors.white.withOpacity(0.6),
+                color: colors['iconColor'],
                 size: 14,
               ),
               const SizedBox(width: 4),
               Text(
                 'Kemungkinan Hujan',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.6),
+                  color: colors['subtitleColor'],
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -431,8 +467,8 @@ class WeatherWidgets extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             '$rainChance%',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: colors['textColor'],
               fontSize: 28,
               fontWeight: FontWeight.w300,
             ),
@@ -445,7 +481,7 @@ class WeatherWidgets extends StatelessWidget {
                 ? 'Kemungkinan hujan\nringan'
                 : 'Kemungkinan kecil\nhujan',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: colors['subtitleColor'],
               fontSize: 11,
               height: 1.2,
             ),
@@ -567,16 +603,45 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
     }
   }
 
+  // Helper method to get theme colors
+  Map<String, Color> _getThemeColors() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return {
+      'blurBackgroundColor':
+          isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
+      'textColor': isDark ? Colors.white : Colors.black,
+      'hintColor': isDark ? Colors.white38 : Colors.black38,
+      'iconColor': isDark ? Colors.white70 : Colors.black54,
+      'subtitleColor': isDark ? Colors.white70 : Colors.black54,
+      'inputBoxColor':
+          isDark
+              ? Colors.white.withOpacity(0.15)
+              : Colors.black.withOpacity(0.05),
+      'cardColor':
+          isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.03),
+      'borderColor':
+          isDark
+              ? Colors.white.withOpacity(0.2)
+              : Colors.black.withOpacity(0.1),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colors = _getThemeColors();
+
     if (isLoading) {
       return ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+            child: Center(
+              child: CircularProgressIndicator(color: colors['textColor']),
             ),
           ),
         ),
@@ -593,11 +658,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error, color: Colors.white, size: 48),
+                  Icon(Icons.error, color: colors['textColor'], size: 48),
                   const SizedBox(height: 16),
                   Text(
                     error!,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: colors['textColor']),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
@@ -618,7 +683,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
         ),
       );
     }
-    final weatherWidgets = WeatherWidgets(weatherData: weatherData);
+
+    final weatherWidgets = WeatherWidgets(
+      weatherData: weatherData,
+      context: context,
+    );
 
     return ClipRRect(
       child: BackdropFilter(
@@ -628,8 +697,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
           child: ListView(
             controller: widget.scrollController,
             children: [
-              const Center(
-                child: Icon(Icons.keyboard_arrow_up, color: Colors.white70),
+              Center(
+                child: Icon(
+                  Icons.keyboard_arrow_up,
+                  color: colors['iconColor'],
+                ),
               ),
               const SizedBox(height: 16),
               _buildWeeklyForecast(),
@@ -647,6 +719,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
   }
 
   Widget _buildWeeklyForecast() {
+    final colors = _getThemeColors();
+
     if (weatherData == null || weatherData!['weather'] == null)
       return Container();
 
@@ -670,22 +744,26 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
 
             if (dayData == null || dayData.isEmpty) {
               return Column(
-                children: const [
+                children: [
                   Text(
                     '--',
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: colors['subtitleColor'],
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Icon(Icons.help_outline, color: Colors.white54, size: 24),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                  Icon(
+                    Icons.help_outline,
+                    color: colors['subtitleColor'],
+                    size: 24,
+                  ),
+                  const SizedBox(height: 8),
                   Text(
                     '--°',
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: colors['subtitleColor'],
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                     ),
@@ -717,7 +795,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                 Text(
                   weekday,
                   style: TextStyle(
-                    color: isToday ? Colors.white : Colors.white54,
+                    color:
+                        isToday ? colors['textColor'] : colors['subtitleColor'],
                     fontSize: 12,
                     fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
                   ),
@@ -728,12 +807,13 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                   width: 24,
                   height: 24,
                   fit: BoxFit.contain,
+                  color: colors['iconColor'],
                 ),
                 const SizedBox(height: 8),
                 Text(
                   '$temp°',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors['textColor'],
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -747,6 +827,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
   }
 
   Widget _buildHourlyForecast() {
+    final colors = _getThemeColors();
+
     if (weatherData == null) return Container();
 
     final todayData = weatherData!['weather']['hari_ini'] as List? ?? [];
@@ -777,11 +859,11 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
       children: [
         Row(
           children: [
-            const Icon(Icons.access_time, color: Colors.white54, size: 13),
+            Icon(Icons.access_time, color: colors['subtitleColor'], size: 13),
             const SizedBox(width: 4),
-            const Text(
+            Text(
               'Ramalan 6 Jam',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: colors['subtitleColor'], fontSize: 12),
             ),
           ],
         ),
@@ -809,8 +891,8 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                       if (index < next6Hours.length) {
                         return Text(
                           _formatTime(next6Hours[index]['waktu']),
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: colors['subtitleColor'],
                             fontSize: 10,
                           ),
                         );
@@ -829,14 +911,14 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
                         return FlSpot(entry.key.toDouble(), temp);
                       }).toList(),
                   isCurved: true,
-                  color: Colors.white,
+                  color: colors['textColor'],
                   barWidth: 2,
                   dotData: FlDotData(
                     show: true,
                     getDotPainter: (spot, percent, barData, index) {
                       return FlDotCirclePainter(
                         radius: 4,
-                        color: Colors.white,
+                        color: colors['textColor']!,
                         strokeWidth: 0,
                       );
                     },
@@ -870,21 +952,29 @@ class _WeatherDetailSheetState extends State<WeatherDetailSheet> {
 class SunPathPainter extends CustomPainter {
   final String sunrise;
   final String sunset;
+  final bool isDark; // <- tambahkan parameter ini
 
-  SunPathPainter({required this.sunrise, required this.sunset});
+  SunPathPainter({
+    required this.sunrise,
+    required this.sunset,
+    required this.isDark,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..color = Colors.white.withOpacity(0.3)
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
+    // Gunakan logika warna berdasarkan tema
+    final arcColor = isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3);
+    final fillColor = isDark ? Colors.orange.withOpacity(0.2) : Colors.orange.withOpacity(0.1);
+    final sunColor = isDark ? Colors.orangeAccent : Colors.deepOrange;
 
-    final fillPaint =
-        Paint()
-          ..color = Colors.orange.withOpacity(0.2)
-          ..style = PaintingStyle.fill;
+    final paint = Paint()
+      ..color = arcColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final fillPaint = Paint()
+      ..color = fillColor
+      ..style = PaintingStyle.fill;
 
     // Draw sun path arc
     final rect = Rect.fromLTWH(
@@ -894,15 +984,12 @@ class SunPathPainter extends CustomPainter {
       size.height / 1.5,
     );
     canvas.drawArc(rect, math.pi, math.pi, false, paint);
-
-    // Fill the arc
     canvas.drawArc(rect, math.pi, math.pi, false, fillPaint);
 
-    // Draw current sun position
-    final sunPaint =
-        Paint()
-          ..color = Colors.orange
-          ..style = PaintingStyle.fill;
+    // Draw current sun position (dummy)
+    final sunPaint = Paint()
+      ..color = sunColor
+      ..style = PaintingStyle.fill;
 
     canvas.drawCircle(Offset(size.width * 0.4, size.height * 0.3), 4, sunPaint);
   }
@@ -913,29 +1000,31 @@ class SunPathPainter extends CustomPainter {
 
 class CompassPainter extends CustomPainter {
   final double windDirection;
+  final bool isDark; // Tambahan
 
-  CompassPainter(this.windDirection);
+  CompassPainter(this.windDirection, {required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
+    final borderColor = isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3);
+    final arrowColor = isDark ? Colors.white : Colors.black;
+
     // Draw compass circle
-    final circlePaint =
-        Paint()
-          ..color = Colors.white.withOpacity(0.3)
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
+    final circlePaint = Paint()
+      ..color = borderColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
     canvas.drawCircle(center, radius, circlePaint);
 
     // Draw wind direction arrow
-    final arrowPaint =
-        Paint()
-          ..color = Colors.white
-          ..strokeWidth = 2
-          ..style = PaintingStyle.stroke;
+    final arrowPaint = Paint()
+      ..color = arrowColor
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
 
     final angle = (windDirection - 90) * math.pi / 180;
     final arrowEnd = Offset(
@@ -946,10 +1035,9 @@ class CompassPainter extends CustomPainter {
     canvas.drawLine(center, arrowEnd, arrowPaint);
 
     // Draw arrow head
-    final arrowHeadPaint =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.fill;
+    final arrowHeadPaint = Paint()
+      ..color = arrowColor
+      ..style = PaintingStyle.fill;
 
     canvas.drawCircle(arrowEnd, 3, arrowHeadPaint);
   }
