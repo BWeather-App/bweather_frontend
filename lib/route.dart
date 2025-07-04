@@ -4,8 +4,8 @@ export 'screens/home/weather_home.dart';
 export 'screens/home/widgets/weather_header.dart';
 export 'screens/home/widgets/weather_detail_sheet.dart';
 export 'screens/home/widgets/restart_widget.dart';
-export 'screens/home/widgets/komponen/sun_path.dart' hide SunPathPainter;
-export 'screens/home/widgets/komponen/wind_direction.dart' hide CompassPainter;
+// export 'screens/home/widgets/komponen/sun_path.dart' hide SunPathPainter;
+// export 'screens/home/widgets/komponen/wind_direction.dart' hide CompassPainter;
 
 // Tampilan Search dan Preview
 export 'screens/search/search_city.dart';
