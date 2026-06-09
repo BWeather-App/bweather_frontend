@@ -1,93 +1,95 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_cuaca/repositories/weather_repository.dart';
+import 'package:flutter_cuaca/services/notification_service.dart';
+
+export 'package:flutter_cuaca/repositories/weather_repository.dart'
+    show WeatherApiException;
 
 class WeatherService {
-  final String _apiUrl =
-      'https://api.kankmaz.biz.id/tools/weather/bweather?lat={lat}&lon={lon}';
+  WeatherService._();
+  static final WeatherService instance = WeatherService._();
 
-  Future<Map<String, dynamic>> fetchWeather({
+  final WeatherRepository _repository = WeatherRepository.instance;
+
+  // ─────────────────────────────────────────────
+  // Get Weather by GPS — dengan cek cuaca ekstrem
+  // ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getWeatherByLocation({
     required double lat,
     required double lon,
   }) async {
-    final url = _apiUrl.replaceAll('{lat}', '$lat').replaceAll('{lon}', '$lon');
+    final data = await _repository.getWeatherByLocation(lat: lat, lon: lon);
 
-    final response = await http.get(Uri.parse(url));
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil data cuaca');
+    // Business logic: cek & kirim notifikasi cuaca ekstrem
+    // Dipisah dari Repository karena ini adalah keputusan bisnis,
+    // bukan bagian dari pengambilan data
+    _checkAndNotifyExtremeWeather(data);
+
+    return data;
+  }
+
+  // ─────────────────────────────────────────────
+  // Get Weather by City Name
+  // ─────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getWeatherByCity(String cityName) async {
+    final data = await _repository.getWeatherByCity(cityName);
+    _checkAndNotifyExtremeWeather(data);
+    return data;
+  }
+
+  // ─────────────────────────────────────────────
+  // Get City Suggestions (autocomplete)
+  // ─────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
+    return _repository.getSuggestions(query);
+  }
+
+  // ─────────────────────────────────────────────
+  // Private: Cek & Kirim Notifikasi Cuaca Ekstrem
+  //
+  // Dipisah jadi method sendiri supaya:
+  //   1. Mudah di-test secara terpisah
+  //   2. Tidak blocking — dipanggil tanpa await
+  // ─────────────────────────────────────────────
+
+  void _checkAndNotifyExtremeWeather(Map<String, dynamic> data) {
+    try {
+      final weather = data['weather'];
+      final lokasi = data['location'];
+      if (weather == null || lokasi == null) return;
+
+      final current = weather['cuaca_saat_ini'];
+      if (current == null) return;
+
+      final double suhu = (current['suhu'] as num?)?.toDouble() ?? 0.0;
+      final double angin =
+          (current['kecepatan_angin'] as num?)?.toDouble() ?? 0.0;
+      final double tekanan =
+          (current['tekanan_udara'] as num?)?.toDouble() ?? 1000.0;
+      final int peluangHujan = (current['peluang_hujan'] as num?)?.toInt() ?? 0;
+      final int uv = (current['indeks_uv'] as num?)?.toInt() ?? 0;
+
+      final List<String> detail = [];
+      if (suhu < 10 || suhu > 35) detail.add('Suhu: $suhu°C');
+      if (angin > 25) detail.add('Angin: ${angin.toStringAsFixed(1)} m/s');
+      if (tekanan < 900)
+        detail.add('Tekanan udara: ${tekanan.toStringAsFixed(1)} hPa');
+      if (peluangHujan > 80) detail.add('Peluang hujan: $peluangHujan%');
+      if (uv >= 8) detail.add('Indeks UV: $uv');
+
+      if (detail.isEmpty) return;
+
+      final pesan = 'Cuaca ekstrem terdeteksi!\n${detail.join('\n')}';
+      final namaKota = lokasi['city'] ?? 'Lokasi tidak diketahui';
+
+      // Fire and forget — tidak perlu await
+      NotificationService.showCuacaEkstrem(namaKota, pesan);
+    } catch (e) {
+      // Jangan crash app hanya karena notifikasi gagal
+      debugPrint('Gagal cek cuaca ekstrem: $e');
     }
-
-    final data = json.decode(response.body);
-    final result = data['result'];
-
-    if (result == null ||
-        result['weather'] == null ||
-        result['location'] == null) {
-      throw Exception('Data cuaca tidak lengkap');
-    }
-
-    final current = result['weather'];
-    final location = result['location'];
-
-    // Dummy data untuk kemarin
-    final yesterday = {
-      'time':
-          DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-      'temp': ((current['temperature'] ?? 0.0) as num).toDouble() - 1,
-      'main': current['main'] ?? 'Cerah',
-      'description': 'Cuaca kemarin',
-    };
-
-    // Ambil forecast per menit, dan filter jadi 1 item per hari
-    final List<dynamic> minutelyForecast =
-        result['forecast']?['minutely'] ?? [];
-    final Map<String, Map<String, dynamic>> dailyMap = {};
-
-    for (final item in minutelyForecast) {
-      final timeStr = item['time'];
-      if (timeStr == null) continue;
-
-      final dateTime = DateTime.tryParse(timeStr);
-      if (dateTime == null) continue;
-
-      final dateKey = DateFormat('yyyy-MM-dd').format(dateTime);
-
-      // Lewati hari ini
-      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      if (dateKey == todayKey) continue;
-
-      // Simpan hanya item pertama dari tanggal yang belum ada
-      if (!dailyMap.containsKey(dateKey)) {
-        dailyMap[dateKey] = item;
-      }
-    }
-
-    // Sortir dan ambil 3 hari ke depan
-    final sortedKeys = dailyMap.keys.toList()..sort();
-    final List<Map<String, dynamic>> dailyList = [];
-
-    for (int i = 0; i < 3 && i < sortedKeys.length; i++) {
-      final key = sortedKeys[i];
-      final item = dailyMap[key]!;
-
-      dailyList.add({
-        'time': item['time'] ?? '',
-        'temp': (item['temperature'] ?? 0.0) as num,
-        'main': item['weather'] ?? 'Cerah',
-        'description': 'Perkiraan cuaca tanggal $key',
-      });
-    }
-
-    return {
-      'location': location,
-      'current': {
-        'time': current['time'] ?? '',
-        'temp': (current['temperature'] ?? 0.0) as num,
-        'main': current['main'] ?? 'Cerah',
-        'description': current['description'] ?? 'Cuaca saat ini',
-      },
-      'yesterday': yesterday,
-      'forecast': dailyList,
-    };
   }
 }

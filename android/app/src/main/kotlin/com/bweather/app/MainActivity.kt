@@ -1,4 +1,4 @@
-package com.example.bweather_frontend
+package com.bweather.app
 
 import io.flutter.embedding.android.FlutterActivity
 
