@@ -1,159 +1,95 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'notification_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_cuaca/repositories/weather_repository.dart';
+import 'package:flutter_cuaca/services/notification_service.dart';
+
+export 'package:flutter_cuaca/repositories/weather_repository.dart'
+    show WeatherApiException;
 
 class WeatherService {
-  String get _baseUrl =>
-      dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
+  WeatherService._();
+  static final WeatherService instance = WeatherService._();
 
-  /// Memanggil data cuaca berdasarkan satu nama kota (simple)
-  Future<Map<String, dynamic>> getWeatherByCity(String city) async {
-    final url = Uri.parse('$_baseUrl/api/search?query=$city');
-    final response = await http.get(url);
+  final WeatherRepository _repository = WeatherRepository.instance;
 
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil data dari kota');
-    }
+  // ─────────────────────────────────────────────
+  // Get Weather by GPS — dengan cek cuaca ekstrem
+  // ─────────────────────────────────────────────
 
-    final data = Map<String, dynamic>.from(json.decode(response.body));
+  Future<Map<String, dynamic>> getWeatherByLocation({
+    required double lat,
+    required double lon,
+  }) async {
+    final data = await _repository.getWeatherByLocation(lat: lat, lon: lon);
 
-    if (data['forecast'] == null || data['location'] == null) {
-      throw Exception('Data cuaca tidak lengkap');
-    }
+    // Business logic: cek & kirim notifikasi cuaca ekstrem
+    // Dipisah dari Repository karena ini adalah keputusan bisnis,
+    // bukan bagian dari pengambilan data
+    _checkAndNotifyExtremeWeather(data);
 
     return data;
   }
 
-  /// Memanggil data cuaca berdasarkan latitude dan longitude
-  Future<Map<String, dynamic>> getWeatherByLocation(
-    double lat,
-    double lon,
-  ) async {
-    final url = Uri.parse('$_baseUrl/api/weather?lat=$lat&lon=$lon');
-    debugPrint('Memanggil $url');
+  // ─────────────────────────────────────────────
+  // Get Weather by City Name
+  // ─────────────────────────────────────────────
 
-    final response = await http.get(url);
-
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil data dari lokasi');
-    }
-
-    final data = Map<String, dynamic>.from(json.decode(response.body));
-
-    if (data['weather'] == null || data['location'] == null) {
-      throw Exception('Data cuaca tidak lengkap');
-    }
-    final weather = data['weather'];
-    final lokasi = data['location'];
-    final double suhu = weather['cuaca_saat_ini']['suhu']?.toDouble() ?? 0;
-    final double angin =
-        weather['cuaca_saat_ini']['kecepatan_angin']?.toDouble() ?? 0;
-    final double tekanan =
-        weather['cuaca_saat_ini']['tekanan_udara']?.toDouble() ?? 1000;
-    final int peluangHujan = weather['cuaca_saat_ini']['peluang_hujan'] ?? 0;
-    final int uv = weather['cuaca_saat_ini']['indeks_uv'] ?? 0;
-
-    bool isSuhuEkstrem = suhu < 10 || suhu > 15;
-    bool isAnginEkstrem = angin > 11;
-    bool isTekananEkstrem = tekanan < 900;
-    bool isHujanEkstrem = peluangHujan > 80;
-    bool isUVEkstrem = uv >= 8;
-
-    bool isEkstrem =
-        isSuhuEkstrem ||
-        isAnginEkstrem ||
-        isTekananEkstrem ||
-        isHujanEkstrem ||
-        isUVEkstrem;
-
-    if (isEkstrem) {
-      List<String> detail = [];
-
-      if (isSuhuEkstrem) {
-        detail.add('Suhu: $suhu°C');
-      }
-      if (isAnginEkstrem) {
-        detail.add('Angin: ${angin.toStringAsFixed(1)} m/s');
-      }
-      if (isTekananEkstrem) {
-        detail.add('Tekanan udara: ${tekanan.toStringAsFixed(1)} hPa');
-      }
-      if (isHujanEkstrem) {
-        detail.add('Peluang hujan: ${peluangHujan.toStringAsFixed(0)}%');
-      }
-      if (isUVEkstrem) {
-        detail.add('Indeks UV: $uv');
-      }
-
-      String pesan = 'Cuaca ekstrem terdeteksi!\n' + detail.join('\n');
-
-      await NotificationService.showCuacaEkstrem(
-        lokasi['city'] ?? 'Lokasi tidak diketahui',
-        pesan,
-      );
-    }
-
-    return Map<String, dynamic>.from(data);
+  Future<Map<String, dynamic>> getWeatherByCity(String cityName) async {
+    final data = await _repository.getWeatherByCity(cityName);
+    _checkAndNotifyExtremeWeather(data);
+    return data;
   }
 
-  /// Mengambil saran lokasi berdasarkan query
+  // ─────────────────────────────────────────────
+  // Get City Suggestions (autocomplete)
+  // ─────────────────────────────────────────────
+
   Future<List<Map<String, dynamic>>> getSuggestions(String query) async {
-    final url = Uri.parse('$_baseUrl/api/suggestions?query=$query');
-    final response = await http.get(url);
-
-    if (response.statusCode != 200) {
-      throw Exception('Gagal mengambil saran lokasi');
-    }
-
-    final List<dynamic> data = json.decode(response.body);
-    return data
-        .map(
-          (item) => {
-            'name': item['name'],
-            'full': item['full'],
-            'lat': item['lat'].toString(),
-            'lon': item['lon'].toString(),
-          },
-        )
-        .toList();
+    return _repository.getSuggestions(query);
   }
 
-  static Future<Map<String, dynamic>?> getWeatherByCityFull(String name) async {
+  // ─────────────────────────────────────────────
+  // Private: Cek & Kirim Notifikasi Cuaca Ekstrem
+  //
+  // Dipisah jadi method sendiri supaya:
+  //   1. Mudah di-test secara terpisah
+  //   2. Tidak blocking — dipanggil tanpa await
+  // ─────────────────────────────────────────────
+
+  void _checkAndNotifyExtremeWeather(Map<String, dynamic> data) {
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
-      final encoded = Uri.encodeComponent(name);
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/search?query=$encoded'),
-      );
-      debugPrint("🔍 Request URL: $baseUrl/api/search?query=$encoded");
+      final weather = data['weather'];
+      final lokasi = data['location'];
+      if (weather == null || lokasi == null) return;
 
-      if (response.statusCode == 200) {
-        return Map<String, dynamic>.from(json.decode(response.body));
-      }
-    } catch (_) {}
+      final current = weather['cuaca_saat_ini'];
+      if (current == null) return;
 
-    return null;
-  }
+      final double suhu = (current['suhu'] as num?)?.toDouble() ?? 0.0;
+      final double angin =
+          (current['kecepatan_angin'] as num?)?.toDouble() ?? 0.0;
+      final double tekanan =
+          (current['tekanan_udara'] as num?)?.toDouble() ?? 1000.0;
+      final int peluangHujan = (current['peluang_hujan'] as num?)?.toInt() ?? 0;
+      final int uv = (current['indeks_uv'] as num?)?.toInt() ?? 0;
 
-  static Future<Map<String, dynamic>?> getWeatherByLatLon({
-    required double lat,
-    required double lon,
-  }) async {
-    try {
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
-      final url = Uri.parse('$baseUrl/api/weather?lat=$lat&lon=$lon');
-      final response = await http.get(url);
+      final List<String> detail = [];
+      if (suhu < 10 || suhu > 35) detail.add('Suhu: $suhu°C');
+      if (angin > 25) detail.add('Angin: ${angin.toStringAsFixed(1)} m/s');
+      if (tekanan < 900)
+        detail.add('Tekanan udara: ${tekanan.toStringAsFixed(1)} hPa');
+      if (peluangHujan > 80) detail.add('Peluang hujan: $peluangHujan%');
+      if (uv >= 8) detail.add('Indeks UV: $uv');
 
-      if (response.statusCode == 200) {
-        final raw = json.decode(response.body);
-        return Map<String, dynamic>.from(raw); // <== INI PENTING
-      }
+      if (detail.isEmpty) return;
+
+      final pesan = 'Cuaca ekstrem terdeteksi!\n${detail.join('\n')}';
+      final namaKota = lokasi['city'] ?? 'Lokasi tidak diketahui';
+
+      // Fire and forget — tidak perlu await
+      NotificationService.showCuacaEkstrem(namaKota, pesan);
     } catch (e) {
-      print("getWeatherByLatLon error: $e");
+      // Jangan crash app hanya karena notifikasi gagal
+      debugPrint('Gagal cek cuaca ekstrem: $e');
     }
-
-    return null;
   }
 }

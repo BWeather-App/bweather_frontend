@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-import 'package:flutter_cuaca/route.dart';
+import 'package:flutter_cuaca/services/weather_service.dart';
 
 class FavoriteService {
+  static const int maxFavorites = 5;
   static late Box _box;
 
   static Future<void> init() async {
@@ -22,14 +23,16 @@ class FavoriteService {
     );
   }
 
-  /// Tambahkan kota ke favorit
-  static Future<void> addFavorite(Map<String, dynamic> cityData) async {
+  /// Tambahkan kota ke favorit. Return false jika sudah penuh.
+  static Future<bool> addFavorite(Map<String, dynamic> cityData) async {
     final favorites = getFavorites();
     final exists = favorites.any((item) => item['full'] == cityData['full']);
     if (!exists) {
+      if (favorites.length >= maxFavorites) return false;
       favorites.add(cityData);
       await _box.put('favorites', favorites);
     }
+    return true;
   }
 
   /// Hapus kota dari favorit
@@ -41,7 +44,7 @@ class FavoriteService {
 
   /// Ambil data cuaca dari max 3 kota favorit
   static Future<List<Map<String, dynamic>>> getFavoriteWeatherData() async {
-    final favorites = getFavorites().take(3).toList();
+    final favorites = getFavorites().take(maxFavorites).toList();
     List<Map<String, dynamic>> weatherList = [];
 
     for (final city in favorites) {
@@ -50,17 +53,16 @@ class FavoriteService {
 
       if (lat != null && lon != null) {
         try {
-          final data = await WeatherService.getWeatherByLatLon(
+          final data = await WeatherService.instance.getWeatherByLocation(
             lat: double.parse(lat.toString()),
             lon: double.parse(lon.toString()),
           );
 
-          if (data != null) {
-            // Tambahkan informasi kota ke dalam data weather
-            final enrichedData = Map<String, dynamic>.from(data);
-            enrichedData['city_info'] = city; // Simpan info kota favorit
-            weatherList.add(enrichedData);
-          }
+          final enrichedData = Map<String, dynamic>.from(data);
+          enrichedData['city_info'] = city;
+          weatherList.add(enrichedData);
+        } on WeatherApiException catch (e) {
+          debugPrint("Gagal memuat cuaca favorit untuk: ${city['full']} — ${e.userMessage}");
         } catch (e) {
           debugPrint("Gagal memuat cuaca favorit untuk: ${city['full']} — $e");
         }

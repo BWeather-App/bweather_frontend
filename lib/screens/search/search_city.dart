@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:ui';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-// import 'package:hive/hive.dart';
-import 'package:flutter_cuaca/route.dart';
+import 'package:flutter_cuaca/constants/constants.dart';
+import 'package:flutter_cuaca/services/weather_service.dart';
+import 'package:flutter_cuaca/services/favorite_service.dart';
+import 'package:flutter_cuaca/helpers/search_history_helper.dart';
 
 class SearchCityPage extends StatefulWidget {
   const SearchCityPage({super.key});
@@ -17,7 +15,7 @@ class SearchCityPage extends StatefulWidget {
 class _SearchCityPageState extends State<SearchCityPage> {
   final TextEditingController _controller = TextEditingController();
   List<String> _searchHistory = [];
-  List<dynamic> _suggestions = [];
+  List<Map<String, dynamic>> _suggestions = [];
   bool _isLoading = false;
   bool _selectMode = false;
   Set<String> _selectedHistory = {};
@@ -33,16 +31,17 @@ class _SearchCityPageState extends State<SearchCityPage> {
     _initFavorites();
   }
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   void _initFavorites() {
     final result = FavoriteService.getFavorites(); // Tidak perlu await
     setState(() {
       _favoriteCities = result;
     });
-  }
-
-  Future<void> _addToFavorites(Map<String, dynamic> cityData) async {
-    await FavoriteService.addFavorite(cityData);
-    _initFavorites();
   }
 
   Future<void> _removeFromFavorites(String fullName) async {
@@ -68,24 +67,14 @@ class _SearchCityPageState extends State<SearchCityPage> {
     await _loadSearchHistory();
 
     try {
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000/api';
-      final encodedCity = Uri.encodeComponent(city);
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/suggestions?query=$encodedCity'),
-      );
-
-      if (response.statusCode == 200) {
-        final raw = jsonDecode(response.body);
-        final data =
-            (raw as List)
-                .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
-                .toList();
-        setState(() {
-          _suggestions = data;
-        });
-      }
-    } catch (_) {
-      // Tambahkan log atau handling jika perlu
+      final data = await WeatherService.instance.getSuggestions(city);
+      setState(() {
+        _suggestions = data;
+      });
+    } on WeatherApiException catch (e) {
+      debugPrint('Search error: ${e.userMessage}');
+    } catch (e) {
+      debugPrint('Search error: $e');
     }
 
     setState(() {
@@ -120,13 +109,8 @@ class _SearchCityPageState extends State<SearchCityPage> {
   ) {
     final city = item['name'];
     final region = item['full'] ?? item['name'];
-    final lat = item['lat'];
-    final lon = item['lon'];
-
-    final alreadyFavorite = _favoriteCities.any((fav) => fav['full'] == region);
-
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: AppDimensions.spaceS),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -134,18 +118,11 @@ class _SearchCityPageState extends State<SearchCityPage> {
       child: ListTile(
         title: Text(
           city,
-          style: GoogleFonts.poppins(
-            color: textColor,
-            fontWeight: FontWeight.w500,
-          ),
+          style: AppTextStyles.searchTitle(context),
         ),
         subtitle: Text(
           region,
-          style: GoogleFonts.poppins(
-            color: subtitleColor,
-            fontWeight: FontWeight.w300,
-            fontSize: 12,
-          ),
+          style: AppTextStyles.searchSubtitle(context),
         ),
         onTap: () async {
           await saveSearchHistory(city);
@@ -157,27 +134,15 @@ class _SearchCityPageState extends State<SearchCityPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final backgroundColor = Colors.transparent;
-    final blurBackgroundColor =
-        isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.05);
-    final textColor = isDark ? Colors.white : Colors.black;
-    final hintColor = isDark ? Colors.white38 : Colors.black38;
-    final iconColor = isDark ? Colors.white70 : Colors.black54;
-    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
-    final inputBoxColor =
-        isDark
-            ? Colors.white.withOpacity(0.15)
-            : Colors.black.withOpacity(0.05);
-    final cardColor =
-        isDark
-            ? Colors.white.withOpacity(0.05)
-            : Colors.black.withOpacity(0.03);
-    final selectedCardColor =
-        isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.1);
+    final blurBackgroundColor = AppColors.blurBackground(context);
+    final textColor = AppColors.textPrimary(context);
+    final hintColor = AppColors.textHint(context);
+    final iconColor = AppColors.icon(context);
+    final subtitleColor = AppColors.textSecondary(context);
+    final inputBoxColor = AppColors.inputBackground(context);
+    final cardColor = AppColors.cardBackground(context);
+    final selectedCardColor = AppColors.selectedCardBackground(context);
 
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
 
@@ -192,40 +157,41 @@ class _SearchCityPageState extends State<SearchCityPage> {
           SafeArea(
             child: Padding(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                left: AppDimensions.spaceL,
+                right: AppDimensions.spaceL,
+                top: AppDimensions.spaceXL,
+                bottom: MediaQuery.of(context).viewInsets.bottom + AppDimensions.spaceXL,
               ),
               child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spaceL),
                     decoration: BoxDecoration(
                       color: inputBoxColor,
                       borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                      border: Border.all(color: AppColors.cardBorder(context)),
                     ),
                     child: Row(
                       children: [
                         Icon(Icons.search, color: iconColor),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppDimensions.spaceS),
                         Expanded(
                           child: TextField(
                             controller: _controller,
-                            style: GoogleFonts.poppins(
-                              color: textColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: AppTextStyles.searchInput(context),
                             decoration: InputDecoration(
                               hintText: 'Cari lokasi',
-                              hintStyle: GoogleFonts.poppins(
-                                color: hintColor,
-                                fontWeight: FontWeight.w400,
-                              ),
+                              hintStyle: AppTextStyles.searchHint(context),
                               border: InputBorder.none,
                             ),
                             onSubmitted: _onSearch,
+                            onChanged: (value) {
+                              if (value.trim().length >= 2) {
+                                _onSearch(value);
+                              } else {
+                                setState(() => _suggestions = []);
+                              }
+                            },
                           ),
                         ),
                         IconButton(
@@ -235,7 +201,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppDimensions.spaceL),
                   if (_isLoading)
                     Center(child: CircularProgressIndicator(color: textColor)),
                   if (!_isLoading && _suggestions.isNotEmpty)
@@ -263,13 +229,9 @@ class _SearchCityPageState extends State<SearchCityPage> {
                         children: [
                           Text(
                             "Lokasi Favorit",
-                            style: GoogleFonts.poppins(
-                              color: subtitleColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: AppTextStyles.searchSection(context),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppDimensions.spaceS),
                           Expanded(
                             child: ListView.builder(
                               itemCount: _favoriteCities.length,
@@ -333,17 +295,11 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                       ),
                                       title: Text(
                                         city['name'] ?? '',
-                                        style: GoogleFonts.poppins(
-                                          color: textColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                        style: AppTextStyles.searchListTitle(context),
                                       ),
                                       subtitle: Text(
                                         city['full'] ?? '',
-                                        style: GoogleFonts.poppins(
-                                          color: subtitleColor,
-                                          fontSize: 12,
-                                        ),
+                                        style: AppTextStyles.searchListSubtitle(context),
                                       ),
                                     ),
                                   ),
@@ -372,10 +328,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                   ),
                                   label: Text(
                                     "Hapus Favorit Terpilih",
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.redAccent,
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                                    style: AppTextStyles.searchActionDelete(context),
                                   ),
                                 ),
                               ],
@@ -394,13 +347,9 @@ class _SearchCityPageState extends State<SearchCityPage> {
                         children: [
                           Text(
                             "Riwayat Pencarian",
-                            style: GoogleFonts.poppins(
-                              color: subtitleColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: AppTextStyles.searchSection(context),
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: AppDimensions.spaceS),
                           Expanded(
                             child: ListView.builder(
                               itemCount: _searchHistory.length,
@@ -451,14 +400,11 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                     child: Row(
                                       children: [
                                         Icon(Icons.history, color: iconColor),
-                                        const SizedBox(width: 12),
+                                        const SizedBox(width: AppDimensions.spaceM),
                                         Expanded(
                                           child: Text(
                                             city,
-                                            style: GoogleFonts.poppins(
-                                              color: textColor,
-                                              fontWeight: FontWeight.w400,
-                                            ),
+                                            style: AppTextStyles.searchListTitle(context),
                                           ),
                                         ),
                                       ],
@@ -479,10 +425,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                 ),
                                 label: Text(
                                   "Hapus Semua",
-                                  style: GoogleFonts.poppins(
-                                    color: iconColor,
-                                    fontWeight: FontWeight.w400,
-                                  ),
+                                  style: AppTextStyles.searchListLabel(context),
                                 ),
                               ),
                               if (_selectMode)
@@ -494,10 +437,7 @@ class _SearchCityPageState extends State<SearchCityPage> {
                                   ),
                                   label: Text(
                                     "Hapus Terpilih",
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.redAccent,
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                                    style: AppTextStyles.searchActionDelete(context),
                                   ),
                                 ),
                             ],

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
@@ -12,7 +13,11 @@ class NotificationService {
       android: androidInit,
     );
 
-    await _plugin.initialize(initSettings);
+    try {
+      await _plugin.initialize(initSettings);
+    } catch (e) {
+      debugPrint('NotificationService init failed: $e');
+    }
   }
 
   static Future<void> showCuacaEkstrem(String kota, String info) async {
@@ -31,11 +36,17 @@ class NotificationService {
       android: androidDetails,
     );
 
-    await _plugin.show(
-      0,
-      '⚠️ Cuaca Ekstrem di $kota',
-      info,
-      notificationDetails,
-    );
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+    try {
+      await _plugin.show(
+        id,
+        '⚠️ Cuaca Ekstrem di $kota',
+        info,
+        notificationDetails,
+      );
+    } catch (e) {
+      debugPrint('NotificationService show failed: $e');
+    }
   }
 }

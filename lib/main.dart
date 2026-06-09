@@ -3,13 +3,23 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'services/notification_service.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'services/permission_service.dart';
-import 'package:flutter_cuaca/route.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-Future<void> mintaIzinNotifikasi() async {
+import 'services/notification_service.dart';
+import 'services/permission_service.dart';
+import 'services/favorite_service.dart';
+import 'providers/weather_provider.dart';
+import 'providers/favorite_provider.dart';
+import 'providers/settings_provider.dart';
+import 'screens/home/weather_home.dart';
+import 'screens/search/search_city_preview.dart';
+import 'utils/restart_widget.dart';
+
+Future<void> _mintaIzinNotifikasi() async {
   if (await Permission.notification.isDenied) {
     await Permission.notification.request();
   }
@@ -26,78 +36,89 @@ Future<void> main() async {
 
   Intl.defaultLocale = 'id_ID';
   await Hive.openBox('weatherBox');
-  await FavoriteService.init(); // inisialisasi service
+  await FavoriteService.init();
   await NotificationService.init();
-  await mintaIzinNotifikasi();
+  await _mintaIzinNotifikasi();
 
-  // runApp(const MyApp());
-  runApp(RestartWidget(child: const MyApp()));
+  final prefs = await SharedPreferences.getInstance();
+  final isDarkMode = prefs.getBool('theme_is_dark') ?? true;
+
+  runApp(RestartWidget(child: MyApp(initialDarkMode: isDarkMode)));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final bool initialDarkMode;
+  const MyApp({super.key, required this.initialDarkMode});
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  bool isDarkMode = true;
-
-  void toggleTheme() {
-    setState(() {
-      isDarkMode = !isDarkMode;
-    });
-  }
+  late bool isDarkMode;
 
   @override
   void initState() {
     super.initState();
-
-    // Menunda permission + init notif agar tidak menghambat UI build
-    Future.delayed(Duration(milliseconds: 300), () async {
-      await PermissionService.requestLocationPermission(context);
-      await NotificationService.init();
-      await mintaIzinNotifikasi();
+    isDarkMode = widget.initialDarkMode;
+    Future.delayed(const Duration(milliseconds: 300), () async {
+      if (!mounted) return;
+      await PermissionService.requestLocationPermission();
     });
+  }
+
+  Future<void> toggleTheme() async {
+    setState(() => isDarkMode = !isDarkMode);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('theme_is_dark', isDarkMode);
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Flutter Cuaca',
-      theme: ThemeData(
-        brightness: Brightness.light,
-        fontFamily: 'Montserrat',
-        scaffoldBackgroundColor: const Color(0xFFFCFAF6),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+    return MultiProvider(
+      providers: [
+        // WeatherProvider — state cuaca GPS
+        ChangeNotifierProvider(create: (_) => WeatherProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => FavoriteProvider()),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'BWeather',
+        theme: ThemeData(
           brightness: Brightness.light,
-          background: const Color(0xFFFCFAF6),
-          onBackground: const Color(0xFF232B3E),
-          primary: const Color(0xFF232B3E),
-          onPrimary: const Color(0xFF232B3E),
+          scaffoldBackgroundColor: const Color(0xFFFCFAF6),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.light,
+            surface: const Color(0xFFFCFAF6),
+            onSurface: const Color(0xFF232B3E),
+            primary: const Color(0xFF232B3E),
+            onPrimary: const Color(0xFF232B3E),
+          ),
+          iconTheme: const IconThemeData(color: Color(0xFF232B3E)),
+          textTheme: GoogleFonts.poppinsTextTheme(
+            Theme.of(context).textTheme,
+          ),
         ),
-        iconTheme: const IconThemeData(color: Color(0xFF232B3E)),
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(color: Color(0xFF232B3E)),
-          bodyLarge: TextStyle(color: Color(0xFF232B3E)),
-          bodySmall: TextStyle(color: Color(0xFF232B3E)),
-        ),
-      ),
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        fontFamily: 'Montserrat',
-        scaffoldBackgroundColor: const Color(0xFF232B3E),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+        darkTheme: ThemeData(
           brightness: Brightness.dark,
+          scaffoldBackgroundColor: const Color(0xFF232B3E),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.deepPurple,
+            brightness: Brightness.dark,
+          ),
+          textTheme: GoogleFonts.poppinsTextTheme(
+            Theme.of(context).textTheme,
+          ),
+        ),
+        themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        routes: {'/city-weather': (context) => const CityWeatherPreviewPage()},
+        home: WeatherHomePage(
+          onToggleTheme: toggleTheme,
+          isDarkMode: isDarkMode,
         ),
       ),
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      routes: {'/city-weather': (context) => CityWeatherPreviewPage()},
-      home: WeatherHomePage(onToggleTheme: toggleTheme, isDarkMode: isDarkMode),
     );
   }
 }
